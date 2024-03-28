@@ -2941,6 +2941,8 @@ button.button__4f306.enabled__470f0:hover svg {
 }
 #app-mount .emojiAliasInput_dd55f7 .emojiInput__4fe54 {					/* emojisettings			nameinput							*/
 	background-color: rgba(var(--transparencycolor_v), .1);
+	margin-top: -1px;
+	margin-left: -8px;
 }
 
 #app-mount .auditLog__6c805 {								/* auditlogs				logitem								*/
@@ -3960,6 +3962,10 @@ button.button__4f306.enabled__470f0:hover svg {
 }
 .layer_ec16dd:nth-child(9) {
 	z-index: 1020;
+}
+.layer_ec16dd ~ .layer_ad604d,
+.layer_ec16dd ~ .backdrop__7e89b.withLayer__1fe9d {
+	z-index: 1021;
 }
 
 .translate_c2f6c4 {
@@ -6258,7 +6264,11 @@ img[src='/assets/387a7c504c96b992872d.svg'] {
 .none__51a8f::-webkit-scrollbar-corner,
 .none__51a8f::-webkit-scrollbar-thumb,
 .none__51a8f::-webkit-scrollbar-track,
-.none__51a8f::-webkit-scrollbar {
+.none__51a8f::-webkit-scrollbar,
+.none__3919e::-webkit-scrollbar-corner,
+.none__3919e::-webkit-scrollbar-thumb,
+.none__3919e::-webkit-scrollbar-track,
+.none__3919e::-webkit-scrollbar {
 	display: none;
 }
 
