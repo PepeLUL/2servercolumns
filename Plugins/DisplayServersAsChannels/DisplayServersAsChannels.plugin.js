@@ -2,7 +2,7 @@
  * @name DisplayServersAsChannels
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.7.5
+ * @version 1.7.7
  * @description Displays Servers in a similar way as Channels
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -86,10 +86,12 @@ module.exports = (_ => {
 						"DirectMessage",
 						"FolderHeader",
 						"FolderItemWrapper",
+						"GuildBadge",
 						"GuildFavorites",
 						"GuildItem",
 						"GuildsBar",
 						"HomeButtonDefault",
+						"IconBadge",
 						"UnavailableGuildsButton"
 					]
 				};
@@ -210,7 +212,8 @@ module.exports = (_ => {
 			
 			processGuildItem (e) {
 				if (!e.instance.props.guild) return;
-				e.returnvalue.props.className = BDFDB.DOMUtils.formatClassName(e.returnvalue.props.className, BDFDB.LibraryStores.UserGuildSettingsStore.isMuted(e.instance.props.guild.id) && BDFDB.disCN._displayserversaschannelsmuted);
+				let guildcontainer = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.guildcontainer]]});
+				if (guildcontainer) guildcontainer.props.className = BDFDB.DOMUtils.formatClassName(guildcontainer.props.className, BDFDB.LibraryStores.UserGuildSettingsStore.isMuted(e.instance.props.guild.id) && BDFDB.disCN._displayserversaschannelsmuted);
 				if (!BDFDB.BDUtils.isPluginEnabled("ServerDetails")) this.removeTooltip(e.returnvalue, e.instance.props.guild);
 				e.returnvalue = this.removeMask(e.returnvalue);
 				this.addElementName(e.returnvalue, e.instance.props.guild.name, {
@@ -231,9 +234,23 @@ module.exports = (_ => {
 				});
 			}
 			
+			processGuildBadge (e) {
+				this.processIconBadge(e, "Guild");
+			}
+			
+			processIconBadge (e, type = "Icon") {
+				if (!e.returnvalue) return;
+				let ref = e.returnvalue.ref;
+				e.returnvalue.ref = BDFDB.TimeUtils.suppress(instance => {
+					if (typeof ref == "function") ref(instance);
+					let node = BDFDB.ReactUtils.findDOMNode(instance);
+					if (node) for (let path of node.querySelectorAll("path")) path.style.setProperty("d", `path("${path.getAttribute("d")}")`, "important");
+				}, `Error in Ref of ${type} Badge`, this);
+			}
+			
 			processFolderHeader (e) {
 				if (!e.instance.props.folderNode) return;
-				e.returnvalue = this.removeMask(e.returnvalue, true);
+				e.returnvalue = this.removeMask(e.returnvalue);
 				let folderColor = BDFDB.ColorUtils.convert(e.instance.props.folderNode.color, "HEX") || BDFDB.ColorUtils.convert(BDFDB.DiscordConstants.Colors.BRAND, "RGB");
 				let folderSize = Math.round(this.settings.amounts.serverElementHeight * 0.725);
 				let badge = null;
@@ -261,7 +278,7 @@ module.exports = (_ => {
 			}
 			
 			processFolderItemWrapper (e) {
-				if (!e.instance.props.folderNode) return;
+				if (!e.instance.props.folderNode && e.returnvalue.props.style["--folder-color"]) return;
 				let folderColor = this.settings.general.addFolderColor && BDFDB.LibraryStores.ExpandedGuildFolderStore.isFolderExpanded(e.instance.props.folderNode.id) && (BDFDB.ColorUtils.convert(e.instance.props.folderNode.color, "HEX") || BDFDB.ColorUtils.convert(BDFDB.DiscordConstants.Colors.BRAND, "RGB"));
 				if (folderColor) e.returnvalue = BDFDB.ReactUtils.createElement("div", {
 					style: {"--folder-color": folderColor},
@@ -366,13 +383,13 @@ module.exports = (_ => {
 								children: name
 							})
 						}),
-						[returnvalue.props.children, options.wrap && children.slice(index + 1)].flat(10).filter(n => !(n && (n.type && n.type.displayName ==  "FolderIcon" || n.props && n.props.className && n.props.className.indexOf(BDFDB.disCN.guildfoldericonwrapper) > -1)))
+						[returnvalue.props.children, options.wrap && children.slice(index + 1)].flat(10).filter(n => !(n && (n.type && n.type.displayName == "FolderIcon" || n.props && n.props.className && n.props.className.indexOf(BDFDB.disCN.guildfoldericonwrapper) > -1)))
 					].flat().filter(n => n);
 					delete returnvalue.props.icon;
 					delete returnvalue.props.name;
 					if (options.wrap) for (let i = children.slice(index + 1).length; i > 0; i--) children[index + i] = null;
 					returnvalue.props.children = options.wrap ? BDFDB.ReactUtils.createElement("div", {
-						className: BDFDB.disCN.guildiconchildwrapper,
+						className: BDFDB.disCNS.guildiconchildwrapper + BDFDB.disCN.guildiconacronym,
 						style: {backgroundColor: options.backgroundColor},
 						children: childEles
 					}) : childEles;
@@ -406,6 +423,7 @@ module.exports = (_ => {
 						width: auto;
 						display: flex;
 						justify-content: flex-start;
+						margin-bottom: 8px;
 						margin-left: 8px;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildinnerwrapper},
@@ -413,6 +431,7 @@ module.exports = (_ => {
 						width: ${this.settings.amounts.serverListWidth - 20}px;
 						height: ${this.settings.amounts.serverElementHeight}px;
 						border-radius: 4px !important;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildsscroller} > div[style*="transform"][style*="height"] {
 						height: unset !important;
@@ -425,9 +444,11 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildiconchildwrapper} {
 						width: ${this.settings.amounts.serverListWidth - 20}px;
 						height: ${this.settings.amounts.serverElementHeight}px;
+						border-radius: 4px !important;
 						padding: 0 8px;
 						box-sizing: border-box;
 						cursor: pointer;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCNS.guildiconchildwrapper + BDFDB.dotCN._displayserversaschannelsname} {
 						flex: 1 1 auto;
@@ -435,6 +456,7 @@ module.exports = (_ => {
 						font-weight: 500;
 						padding-top: 1px;
 						overflow: hidden;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCNS.guildiconchildwrapper + BDFDB.dotCN._displayserversaschannelsname} ~ img {
 						height: 130%;
@@ -456,6 +478,7 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCNS.guildiconchildwrapper + BDFDB.dotCNS._displayserversaschannelsbadge + BDFDB.dotCN.avataricon} {
 						width: ${this.settings.amounts.serverElementHeight/32 * 24}px;
 						height: ${this.settings.amounts.serverElementHeight/32 * 24}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCNS.guildiconchildwrapper + BDFDB.dotCN.badgebase} {
 						margin-left: 4px;
@@ -477,11 +500,13 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.homebuttonicon} {
 						width: ${this.settings.amounts.serverElementHeight/32 * 28}px;
 						height: ${this.settings.amounts.serverElementHeight/32 * 20}px;
+						transform: unset;
 					}
 
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.avatarwrapper} {
 						width: ${this.settings.amounts.serverElementHeight/32 * 24}px !important;
 						height: ${this.settings.amounts.serverElementHeight/32 * 24}px !important;
+						transform: unset;
 					}
 					
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildseparator} {
@@ -491,6 +516,7 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildiconwrapper} {
 						height: ${this.settings.amounts.serverElementHeight}px;
 						width: ${this.settings.amounts.serverListWidth - 20}px;
+						transform: unset;
 					}
 
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfolderwrapper} {
@@ -501,6 +527,7 @@ module.exports = (_ => {
 						align-items: center;
 						height: ${this.settings.amounts.serverElementHeight}px;
 						width: ${this.settings.amounts.serverListWidth - 20}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfolder}[data-folder-name]::after {
 						content: attr(data-folder-name);
@@ -517,16 +544,19 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfoldericonwrapper}[style*="background"] {
 						margin-left: ${Math.round(this.settings.amounts.serverElementHeight * -0.15)}px;
 						background-position-x: ${Math.round(this.settings.amounts.serverElementHeight * 0.75) / 10}px !important;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfolder} > ${BDFDB.dotCN.guildfoldericonwrapper} {
 						margin-left: 6px;
 						background-size: ${Math.round(this.settings.amounts.serverElementHeight * 0.85)}px ${Math.round(this.settings.amounts.serverElementHeight * 0.85)}px !important;
 						background-position: center center !important;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfoldericonwrapper},
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfoldericonwrapperexpanded} {
 						height: ${Math.round(this.settings.amounts.serverElementHeight * 0.85)}px;
 						width: ${Math.round(this.settings.amounts.serverElementHeight * 0.85)}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfolderexpandedbackground} {
 						top: -2px;
@@ -535,10 +565,6 @@ module.exports = (_ => {
 						left: 6px;
 						width: auto;
 						border-radius: 4px;
-					}
-					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCN.guildswrapper} [style*="--folder-color"] ${BDFDB.dotCN.guildfolderexpandedbackground} {
-						background: var(--folder-color) !important;
-						opacity: 0.2 !important;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildfolderwrapper} [role="group"] {
 						height: auto !important;
@@ -550,10 +576,12 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildbuttoninner} {
 						height: ${this.settings.amounts.serverElementHeight}px;
 						width: ${this.settings.amounts.serverListWidth - 20}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildbuttoninner} svg {
 						width: ${this.settings.amounts.serverElementHeight/32 * 20}px;
 						height: ${this.settings.amounts.serverElementHeight/32 * 20}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCNS.guildbuttoninner + BDFDB.dotCN._displayserversaschannelsname} {
 						padding-top: 0;
@@ -565,6 +593,7 @@ module.exports = (_ => {
 						font-size: ${this.settings.amounts.serverElementHeight/32 * 20}px;
 						border: none;
 						display: block;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCNS.guildserror + BDFDB.dotCN.guildiconchildwrapper} {
 						padding-right: ${this.settings.amounts.serverElementHeight/32 * 16 + (32/this.settings.amounts.serverElementHeight - 1) * 4}px;
@@ -578,11 +607,13 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN._readallnotificationsbuttonbutton} {
 						height: ${this.settings.amounts.serverElementHeight}px !important;
 						width: ${this.settings.amounts.serverListWidth - 20}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN._friendnotificationsfriendsonline},
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildslabel} {
 						height: ${this.settings.amounts.serverElementHeight * 0.6}px !important;
 						width: ${this.settings.amounts.serverListWidth - 20}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN._readallnotificationsbuttonbutton},
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN._friendnotificationsfriendsonline},
@@ -595,6 +626,7 @@ module.exports = (_ => {
 						text-transform: capitalize;
 						padding-top: 1px;
 						padding-left: 8px;
+						transform: unset;
 					}
 
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildplaceholdermask},
@@ -610,6 +642,7 @@ module.exports = (_ => {
 						border-radius: 4px;
 						height: ${this.settings.amounts.serverElementHeight}px;
 						width: ${this.settings.amounts.serverListWidth - 20}px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildplaceholdermask} > *,
 						display: none;
@@ -635,6 +668,7 @@ module.exports = (_ => {
 						font-size: ${this.settings.amounts.serverElementHeight / 2}px;
 						font-weight: 500;
 						padding-left: 8px;
+						transform: unset;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCN.guildswrapper} #server-search ${BDFDB.dotCN.guildinner}::after {
 						content: "";
@@ -644,6 +678,7 @@ module.exports = (_ => {
 						width: ${this.settings.amounts.serverElementHeight/32 * 20}px;
 						height: ${this.settings.amounts.serverElementHeight/32 * 20}px;
 						background: var(--text-normal);
+						transform: unset;
 						-webkit-mask: url('data:image/svg+xml;base64,PHN2ZyB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAxOCAxOCI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTMuNjAwOTE0ODEsNy4yMDI5NzMxMyBDMy42MDA5MTQ4MSw1LjIwOTgzNDE5IDUuMjA5ODM0MTksMy42MDA5MTQ4MSA3LjIwMjk3MzEzLDMuNjAwOTE0ODEgQzkuMTk2MTEyMDYsMy42MDA5MTQ4MSAxMC44MDUwMzE0LDUuMjA5ODM0MTkgMTAuODA1MDMxNCw3LjIwMjk3MzEzIEMxMC44MDUwMzE0LDkuMTk2MTEyMDYgOS4xOTYxMTIwNiwxMC44MDUwMzE0IDcuMjAyOTczMTMsMTAuODA1MDMxNCBDNS4yMDk4MzQxOSwxMC44MDUwMzE0IDMuNjAwOTE0ODEsOS4xOTYxMTIwNiAzLjYwMDkxNDgxLDcuMjAyOTczMTMgWiBNMTIuMDA1NzE3NiwxMC44MDUwMzE0IEwxMS4zNzMzNTYyLDEwLjgwNTAzMTQgTDExLjE0OTIyODEsMTAuNTg4OTA3OSBDMTEuOTMzNjc2NCw5LjY3NjM4NjUxIDEyLjQwNTk0NjMsOC40OTE3MDk1NSAxMi40MDU5NDYzLDcuMjAyOTczMTMgQzEyLjQwNTk0NjMsNC4zMjkzMzEwNSAxMC4wNzY2MTUyLDIgNy4yMDI5NzMxMywyIEM0LjMyOTMzMTA1LDIgMiw0LjMyOTMzMTA1IDIsNy4yMDI5NzMxMyBDMiwxMC4wNzY2MTUyIDQuMzI5MzMxMDUsMTIuNDA1OTQ2MyA3LjIwMjk3MzEzLDEyLjQwNTk0NjMgQzguNDkxNzA5NTUsMTIuNDA1OTQ2MyA5LjY3NjM4NjUxLDExLjkzMzY3NjQgMTAuNTg4OTA3OSwxMS4xNDkyMjgxIEwxMC44MDUwMzE0LDExLjM3MzM1NjIgTDEwLjgwNTAzMTQsMTIuMDA1NzE3NiBMMTQuODA3MzE4NSwxNiBMMTYsMTQuODA3MzE4NSBMMTIuMjEwMjUzOCwxMS4wMDk5Nzc2IEwxMi4wMDU3MTc2LDEwLjgwNTAzMTQgWiI+PC9wYXRoPjwvZz48L3N2Zz4=') center/cover no-repeat;
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCN.guildswrapper} #server-search ${BDFDB.dotCN.guildbuttonpill},

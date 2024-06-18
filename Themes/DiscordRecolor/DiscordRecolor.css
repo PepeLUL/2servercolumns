@@ -46,9 +46,9 @@
 	--backgroundfloating_v:			var(--backgroundfloating_s, var(--backgroundfloating));
 }
 
-.theme-light:not(.userProfileOuterThemed__1fbd7),
-.theme-dark:not(.userProfileOuterThemed__1fbd7),
-.theme-amoled:not(.userProfileOuterThemed__1fbd7) {
+.theme-light:not(.userProfileOuterThemed_a425f3),
+.theme-dark:not(.userProfileOuterThemed_a425f3),
+.theme-amoled:not(.userProfileOuterThemed_a425f3) {
 	--text-positive: rgb(var(--successcolor_v));
 	--text-warning: rgb(var(--warningcolor_v));
 	--text-danger: rgb(var(--dangercolor_v));
@@ -168,6 +168,13 @@
 	--background-message-hover: rgba(var(--backgroundfloating_v),.15);
 	--background-message-automod: rgba(var(--dangercolor_v),.05);
 	--background-message-automod-hover: rgba(var(--dangercolor_v),.1);
+	
+	--card-gradient-bg: var(--background-tertiary);
+	--card-primary-bg: var(--background-primary);
+	--card-secondary-bg: var(--background-secondary);
+	--card-gradient-pressed-bg: var(--background-floating);
+	--card-primary-pressed-bg: var(--background-secondary);
+	--card-secondary-pressed-bg: var(--background-tertiary);
 	
 	--scrollbar-thin-thumb: rgb(var(--backgroundtertiary_v));
 	--scrollbar-thin-track: transparent;
@@ -1112,6 +1119,14 @@ img[src='/assets/387a7c504c96b992872d.svg'] {
 /* ~~~~		4.		CHAT						~~~~ */
 
 .mainTableContainer__37b54 {
+	background: var(--background-secondary);
+}
+
+#app-mount .scrollerContainer_dda72c,
+#app-mount .emptyPage_feb902 {
+	background: var(--bg-overlay-chat,var(--background-primary));
+}
+#app-mount .scrollerContainer_dda72c .prompt__1b100 {
 	background: var(--background-secondary);
 }
 
@@ -2998,14 +3013,14 @@ img[src='/assets/387a7c504c96b992872d.svg'] {
 
 /* ----		12.1.		USERPOPOUT					---- */
 
-#app-mount .userPopoutOuter__3884e {
+#app-mount .userPopoutOuter_d67f56 {
 	box-shadow: 0 0 0 1px rgba(var(--backgroundtertiary_v),.6), 0 2px 10px 0 rgba(0,0,0,.2);
 }
 
 .profileColors_ac6ab4 .mask_d5067d circle {
 	fill: transparent;
 }
-#app-mount .userProfileOuterThemed__1fbd7 ::-webkit-scrollbar-thumb {
+#app-mount .userProfileOuterThemed_a425f3 ::-webkit-scrollbar-thumb {
 	background-color: var(--profile-gradient-secondary-color) !important;
 }
 

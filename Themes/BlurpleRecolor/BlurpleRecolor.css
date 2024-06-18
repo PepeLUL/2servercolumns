@@ -512,17 +512,17 @@
 	border-color: rgb(var(--accentcolor_v)) !important;
 }
 
-.image__7ea68[src="/assets/e49c372705a84e02772c.svg"] {					/* textarea				follow channel icon						*/
+.image__7ea68[src="/assets/428b2be4430a0d1d072f.svg"] {					/* textarea				follow channel icon						*/
 	object-position: -999999px -999999px;
 	background: url(https://mwittrien.github.io/BetterDiscordAddons/Themes/_res/svgs/blurple/chatnotice_followchannel_bg.svg) center/contain no-repeat;
 	width: 47px;
 	height: 60px;
 	margin-bottom: -8px;
 }
-.image__7ea68[src="/assets/e49c372705a84e02772c.svg"] + * {
+.image__7ea68[src="/assets/428b2be4430a0d1d072f.svg"] + * {
 	overflow: visible;
 }
-.image__7ea68[src="/assets/e49c372705a84e02772c.svg"] + *::after {
+.image__7ea68[src="/assets/428b2be4430a0d1d072f.svg"] + *::after {
 	content: "";
 	position: absolute;
 	bottom: 8px;
@@ -2307,6 +2307,13 @@ a.metadataDownload__9673d {
 	background: var(--bd-blue);
 }
 
+html #bd-modal-container {
+	color: transparent;
+}
+html #bd-modal-container > * {
+	color: var(--header-secondary);
+}
+
 .bd-modal-wrapper .footer button {
 	background: var(--bd-blue);
 }
@@ -2339,9 +2346,11 @@ a.metadataDownload__9673d {
 	background: var(--accentcolor-hover);
 }
 .bd-addon-modal-footer .bd-button:active,
-
 .bd-button-filled.bd-button-color-brand:active {
 	background: var(--accentcolor-active);
+}
+.bd-button-filled.bd-button-color-brand:disabled {
+	background: var(--bd-blue) !important;
 }
 
 .bd-description-wrap .banner {

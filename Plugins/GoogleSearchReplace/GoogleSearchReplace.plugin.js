@@ -2,7 +2,7 @@
  * @name GoogleSearchReplace
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.3.6
+ * @version 1.3.7
  * @description Replaces the default Google Text Search with a custom Search Engine
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -14,9 +14,7 @@
 
 module.exports = (_ => {
 	const changeLog = {
-		improved: {
-			"Own Search Engines": "You can now add your own engines in the settings"
-		}
+		
 	};
 	
 	return !window.BDFDB_Global || (!window.BDFDB_Global.loaded && !window.BDFDB_Global.started) ? class {
@@ -246,6 +244,10 @@ module.exports = (_ => {
 			}
 
 			onMessageContextMenu (e) {
+				this.injectItem(e);
+			}
+
+			onTextContextMenu (e) {
 				this.injectItem(e);
 			}
 
