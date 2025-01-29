@@ -2,7 +2,7 @@
  * @name ServerDetails
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.1.9
+ * @version 1.2.4
  * @description Shows Server Details in the Server List Tooltip
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -298,7 +298,7 @@ module.exports = (_ => {
 									this.settings.dates[key] = valueObj;
 									BDFDB.DataUtils.save(this.settings.dates, this, "dates");
 								}
-							}))).concat(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+							}))).concat(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 								className: BDFDB.disCN.marginbottom8
 							})).concat(Object.keys(this.defaults.amounts).map(key => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsSaveItem, {
 								type: "Slider",
@@ -313,7 +313,7 @@ module.exports = (_ => {
 								onValueRender: value => value + this.defaults.amounts[key].unit,
 								childProps: {type: "number"},
 								value: this.settings.amounts[key]
-							}))).concat(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+							}))).concat(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 								className: BDFDB.disCN.marginbottom8
 							})).concat(Object.keys(this.defaults.colors).map(key => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsSaveItem, {
 								type: "TextInput",
@@ -357,14 +357,14 @@ module.exports = (_ => {
 			}
 			
 			processGuildItem (e) {
+				if (!e.instance.props.guild || typeof e.instance.props?.children?.props?.className != "string" || e.instance.props?.children?.props?.className.indexOf(BDFDB.disCN.guildcontainer) == -1) return;
 				if (!BDFDB.GuildUtils.is(e.instance.props.guild)) return;
 				let tooltipContainer;
-				let [children, index] = BDFDB.ReactUtils.findParent(e.returnvalue, {name: ["GuildTooltip", "BDFDB_TooltipContainer"]});
-				if (index > -1) children[index] = BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, Object.assign({}, children[index].props, {
+				e.returnvalue = BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, Object.assign({}, e.returnvalue.props, {
 					ref: instance => {if (instance) tooltipContainer = instance;},
 					tooltipConfig:  Object.assign({
 						backgroundColor: this.settings.colors.tooltipColor
-					}, children[index].props.tooltipConfig, {
+					}, e.returnvalue.props.tooltipConfig, {
 						type: "right",
 						guild: e.instance.props.guild,
 						list: true,
@@ -374,7 +374,8 @@ module.exports = (_ => {
 						shiftKey: event.shiftKey,
 						tooltipContainer: tooltipContainer,
 						guild: e.instance.props.guild
-					})
+					}),
+					children: typeof e.returnvalue.props.children == "function" ? e.instance.props.children : e.returnvalue.props.children
 				}));
 			}
 
@@ -557,7 +558,7 @@ module.exports = (_ => {
 						};
 					case "zh-TW":	// Chinese (Taiwan)
 						return {
-							boosts:								"助推器",
+							boosts:								"加成數",
 							creation_date:							"創建日期",
 							icon:								"圖示",
 							join_date:							"參加日期"

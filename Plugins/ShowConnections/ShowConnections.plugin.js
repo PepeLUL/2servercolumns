@@ -2,7 +2,7 @@
  * @name ShowConnections
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.1.9
+ * @version 1.2.5
  * @description Shows the connected Accounts of a User in the UserPopout
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -78,11 +78,13 @@ module.exports = (_ => {
 				let connections = loadedUsers[this.props.user.id].filter(c => _this.settings.connections[c.type]);
 				if (!connections.length) return null;
 				let isLightTheme = (!this.props.theme || this.props.theme == "light") && BDFDB.DiscordUtils.getTheme() == BDFDB.disCN.themelight;
-				return BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.UserPopoutSection, {
+				return BDFDB.ReactUtils.createElement("section", {
+					className: BDFDB.DOMUtils.formatClassName(BDFDB.disCN.userprofilesection, BDFDB.disCN._showconnectionsconnectionswrapper),
 					children: [
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Heading, {
-							className: BDFDB.disCN.userpopoutsectiontitle,
-							variant: "eyebrow",
+							className: BDFDB.disCN.userprofilesectionheading,
+							variant: "text-xs/semibold",
+							style: {color: "var(--header-secondary)"},
 							color: null,
 							children: BDFDB.LanguageUtils.LanguageStrings.CONNECTIONS
 						}),
@@ -94,8 +96,6 @@ module.exports = (_ => {
 								let metadata = [];
 								if (_this.settings.general.showDetails && provider.hasMetadata && c.metadata) {
 									if (c.metadata.created_at) metadata.push(BDFDB.ReactUtils.createElement("span", {children: BDFDB.LanguageUtils.LanguageStringsFormat("CONNECTIONS_PROFILE_MEMBER_SINCE", (new Date(c.metadata.created_at)).toLocaleDateString("default", {year: "numeric", month: "long", day: "numeric"}))}));
-									let metadataGetter = BDFDB.LibraryModules.ConnectionMetadataUtils["get" + BDFDB.StringUtils.upperCaseFirstChar(c.type)];
-									if (metadataGetter) metadata = metadata.concat(metadataGetter(c.metadata));
 								}
 								return BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
 									text: `${provider.name}: ${c.name}`,
@@ -162,9 +162,11 @@ module.exports = (_ => {
 				requestedUsers = {};
 				queuedInstances = {};
 				
+				this.patchPriority = 9;
+				
 				this.modulePatches = {
 					after: [
-						"UserConnectionsSection"
+						"UserHeaderUsername"
 					]
 				};
 				
@@ -182,6 +184,9 @@ module.exports = (_ => {
 				for (let connection of BDFDB.LibraryModules.ConnectionProviderUtils.filter(n => n)) this.defaults.connections[connection.type] = Object.assign({}, connection, {value: true});
 				
 				this.css = `
+					${BDFDB.dotCN._showconnectionsconnectionswrapper} {
+						order: 999;
+					}
 					${BDFDB.dotCN._showconnectionsconnections} {
 						display: flex;
 						flex-wrap: wrap;
@@ -254,16 +259,16 @@ module.exports = (_ => {
 				});
 			}
 
-			processUserConnectionsSection (e) {
+			processUserHeaderUsername (e) {
+				if (e.instance.props.profileType != "BITE_SIZE" || e.instance.props.className) return;
 				let user = e.instance.props.user || BDFDB.LibraryStores.UserStore.getUser(e.instance.props.userId);
 				if (!user || user.isNonUserBot()) return;
-				e.returnvalue = [
-					e.returnvalue,
-					BDFDB.ReactUtils.createElement(UserConnectionsComponents, {
-						user: user,
-						theme: e.instance.props.theme
-					}, true)
-				];
+				e.returnvalue = [e.returnvalue].flat(10);
+				e.returnvalue.push(BDFDB.ReactUtils.createElement(UserConnectionsComponents, {
+					user: user,
+					isSimplified: true,
+					theme: e.instance.props.theme
+				}, true));
 			}
 		};
 	})(window.BDFDB_Global.PluginUtils.buildPlugin(changeLog));

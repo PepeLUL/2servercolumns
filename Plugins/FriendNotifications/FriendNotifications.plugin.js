@@ -2,7 +2,7 @@
  * @name FriendNotifications
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 2.0.0
+ * @version 2.0.5
  * @description Shows a Notification when a Friend or a User, you choose to observe, changes their Status
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -163,7 +163,7 @@ module.exports = (_ => {
 					amount: 50,
 					copyToBottom: true,
 					renderItem: (log, i) => [
-						i > 0 ? BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+						i > 0 ? BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 						className: BDFDB.disCNS.margintop8 + BDFDB.disCN.marginbottom8
 						}) : null,
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
@@ -208,11 +208,14 @@ module.exports = (_ => {
 
 				this.defaults = {
 					general: {
-						addOnlineCount:			{value: true, 	description: "Adds an Online Friend Counter to the Server List (Click to open Time Log)"},
-						showDiscriminator:		{value: false, 	description: "Adds the User Discriminator"},
-						showTimestamp:			{value: false, 	description: "Adds the Timestamp"},
-						muteOnDND:			{value: false, 	description: "Does not notify you when you are in DnD Status"},
-						openOnClick:			{value: false, 	description: "Opens the DM when you click a Notification"}
+						addOnlineCount:			{value: true, 			description: "Adds an Online Friend Counter to the Server List (Click to open Time Log)"},
+						showDiscriminator:		{value: false, 			description: "Adds the User Discriminator"},
+						showTimestamp:			{value: false, 			description: "Adds the Timestamp"},
+						muteOnDND:			{value: false, 			description: "Does not notify you when you are in DnD Status"},
+						openOnClick:			{value: false, 			description: "Opens the DM when you click a Notification"}
+					},
+					choices: {
+						toastPosition:			{value: "right",		description: "Position of Toast Notifications",		items: "ToastPositions"}
 					},
 					notificationStrings: {
 						online: 			{value: "$user changed status to '$status'"},
@@ -315,9 +318,8 @@ module.exports = (_ => {
 					this.SettingsUpdated = true;
 					BDFDB.PluginUtils.refreshSettingsPanel(this, settingsPanel, collapseStates);
 				};
-				let successSavedAudio = (type, parsedUrl, parsedData) => {
-					if (parsedUrl && parsedData) BDFDB.NotificationUtils.toast(`Sound was saved successfully.`, {type: "success"});
-					this.settings.notificationSounds[type].url = parsedUrl;
+				let successSavedAudio = (type, parsedData) => {
+					if (parsedData) BDFDB.NotificationUtils.toast(`Sound was saved successfully.`, {type: "success"});
 					this.settings.notificationSounds[type].song = parsedData;
 					BDFDB.DataUtils.save(this.settings.notificationSounds, this, "notificationSounds");
 					this.SettingsUpdated = true;
@@ -325,7 +327,7 @@ module.exports = (_ => {
 				let createUserList = (users, type, title) => {
 					let items = [];
 					items.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
-						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCNS.settingsrowtitledefault + BDFDB.disCN.cursordefault,
+						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCN.cursordefault,
 						children: [
 							"Click on an Option to toggle",
 							BDFDB.ReactUtils.createElement("span", {
@@ -337,7 +339,7 @@ module.exports = (_ => {
 						]
 					}));
 					if ("Notification" in window) items.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
-						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCNS.settingsrowtitledefault + BDFDB.disCN.cursordefault,
+						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCN.cursordefault,
 						children: [
 							"Right-Click on an Option to toggle",
 							BDFDB.ReactUtils.createElement("span", {
@@ -349,7 +351,7 @@ module.exports = (_ => {
 						]
 					}));
 					items.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
-						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCNS.settingsrowtitledefault + BDFDB.disCN.cursordefault,
+						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCN.cursordefault,
 						style: {marginTop: 6},
 						children: [
 							"Click on an Option Header to toggle",
@@ -362,7 +364,7 @@ module.exports = (_ => {
 						]
 					}));
 					if ("Notification" in window) items.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
-						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCNS.settingsrowtitledefault + BDFDB.disCN.cursordefault,
+						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCN.cursordefault,
 						children: [
 							"Right-Click on an Option Header to toggle",
 							BDFDB.ReactUtils.createElement("span", {
@@ -374,12 +376,12 @@ module.exports = (_ => {
 						]
 					}));
 					items.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
-						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCNS.settingsrowtitledefault + BDFDB.disCN.cursordefault,
+						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCN.cursordefault,
 						style: {marginTop: 6},
 						children: "Click on an Avatar to toggle between enabled/disabled"
 					}));
 					if ("Notification" in window) items.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
-						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCNS.settingsrowtitledefault + BDFDB.disCN.cursordefault,
+						className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCN.cursordefault,
 						children: [
 							"Right-Click on an Avatar to toggle all Options between",
 							BDFDB.ReactUtils.createElement("span", {
@@ -505,6 +507,19 @@ module.exports = (_ => {
 									label: this.defaults.general[key].description,
 									value: this.settings.general[key]
 								})),
+								Object.keys(this.defaults.choices).map(key => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsSaveItem, {
+									type: "Select",
+									plugin: this,
+									keys: ["choices", key],
+									label: this.defaults.choices[key].description,
+									basis: "50%",
+									value: this.settings.choices[key],
+									options: Object.keys(BDFDB.DiscordConstants[this.defaults.choices[key].items] || {}).map(p => ({
+										value: p,
+										label: BDFDB.LanguageUtils.LibraryStrings[p] || p
+									})),
+									searchable: true
+								})),
 								Object.keys(this.defaults.dates).map(key => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.DateInput, {
 									...(this.settings.dates[key] || {}),
 									label: this.defaults.dates[key].description,
@@ -604,7 +619,7 @@ module.exports = (_ => {
 							children: [BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
 								className: BDFDB.disCN.marginbottom8,
 								children: BDFDB.ReactUtils.createElement("div", {
-									className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCNS.settingsrowtitledefault + BDFDB.disCN.cursordefault,
+									className: BDFDB.disCNS.settingsrowtitle + BDFDB.disCN.cursordefault,
 									children: [
 										"Allows you to configure your own Message Strings for the different Statuses.",
 										[
@@ -637,7 +652,7 @@ module.exports = (_ => {
 							title: "Notification Sounds",
 							collapseStates: collapseStates,
 							children: Object.keys(this.defaults.notificationSounds).map((key, i) => (key.indexOf("desktop") == -1 || "Notification" in window) && [
-								i != 0 && key.indexOf("toast") == 0 && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+								i != 0 && key.indexOf("toast") == 0 && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 									className: BDFDB.disCN.marginbottom8
 								}),
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
@@ -670,32 +685,29 @@ module.exports = (_ => {
 												className: `input-${key}src`,
 												type: "file",
 												filter: ["audio", "video"],
-												useFilePath: true,
-												placeholder: "Url or File Path",
-												value: this.settings.notificationSounds[key].url
+												placeholder: "Url or File",
+												value: this.settings.notificationSounds[key].song
 											})
 										}),
 										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Button, {
 											onClick: _ => {
-												let source = settingsPanel.props._node.querySelector(`.input-${key}src ` + BDFDB.dotCN.input).value.trim();
-												if (!source.length) {
+												let source = settingsPanel.props._node.querySelector(`.input-${key}src ` + BDFDB.dotCN.input);
+												let value = source && (source.getAttribute("file") || source.value).trim()
+												if (!value.length) {
 													BDFDB.NotificationUtils.toast(`Sound File was removed.`, {type: "warning"});
-													successSavedAudio(key, source, source);
+													successSavedAudio(key, value);
 												}
-												else if (source.indexOf("http") == 0) BDFDB.LibraryRequires.request(source, (error, response, result) => {
+												else if (value.indexOf("http") == 0) BDFDB.LibraryRequires.request(value, (error, response, result) => {
 													if (response) {
 														let type = response.headers["content-type"];
 														if (type && (type.indexOf("octet-stream") > -1 || type.indexOf("audio") > -1 || type.indexOf("video") > -1)) {
-															successSavedAudio(key, source, source);
+															successSavedAudio(key, value);
 															return;
 														}
 													}
 													BDFDB.NotificationUtils.toast("Use a valid direct Link to a Video or Audio Source, they usually end on something like .mp3, .mp4 or .wav", {type: "danger"});
 												});
-												else BDFDB.LibraryRequires.fs.readFile(source, "base64", (error, body) => {
-													if (error) BDFDB.NotificationUtils.toast("Could not fetch File, please make sure the File exists", {type: "danger"});
-													else successSavedAudio(key, source, `data:audio/mpeg;base64,${body}`);
-												});
+												else if (value.indexOf("data:") == 0) return successSavedAudio(key, value);
 											},
 											children: BDFDB.LanguageUtils.LanguageStrings.SAVE
 										})
@@ -731,10 +743,22 @@ module.exports = (_ => {
 			
 			processGuildsBar (e) {
 				if (!this.settings.general.addOnlineCount) return;
-				let [children, index] = BDFDB.ReactUtils.findParent(e.returnvalue, {name: "UnreadDMs"});
-				if (index > -1) children.splice(index, 0, BDFDB.ReactUtils.createElement(FriendOnlineCounterComponent, {
-					amount: this.getOnlineCount()
-				}));
+				const process = returnValue => {
+					let [children, index] = BDFDB.ReactUtils.findParent(returnValue, {name: "UnreadDMs"});
+					if (index > -1) children.splice(index, 0, BDFDB.ReactUtils.createElement(FriendOnlineCounterComponent, {
+						amount: this.getOnlineCount()
+					}));
+				};
+				let themeWrapper = BDFDB.ReactUtils.findChild(e.returnvalue, {filter: n => n && n.props && typeof n.props.children == "function"});
+				if (themeWrapper) {
+					let childrenRender = themeWrapper.props.children;
+					themeWrapper.props.children = BDFDB.TimeUtils.suppress((...args) => {
+						let children = childrenRender(...args);
+						process(children);
+						return children;
+					}, "Error in Children Render of Theme Wrapper!", this);
+				}
+				else process(e.returnvalue);
 			}
 			
 			getObservedData () {
@@ -913,6 +937,7 @@ module.exports = (_ => {
 									timeout: this.settings.amounts.toastTime * 1000,
 									avatar: avatar,
 									barColor: BDFDB.UserUtils.getStatusColor(status.name, true),
+									position: this.settings.choices.toastPosition,
 									onClick: openChannel,
 									onShow: _ => {
 										let notificationSound = this.settings.notificationSounds["toast" + status.name] || {};
@@ -987,163 +1012,163 @@ module.exports = (_ => {
 				switch (BDFDB.LanguageUtils.getLanguage().id) {
 					case "bg":		// Bulgarian
 						return {
-							clear_log:							"Наистина ли искате да изчистите дневника на времето?",
+							clear_log:						"Наистина ли искате да изчистите дневника на времето?",
 							status_listening:					"Слушане",
 							status_playing:						"Играе"
 						};
 					case "da":		// Danish
 						return {
-							clear_log:							"Er du sikker på, at du vil rydde tidsloggen?",
+							clear_log:						"Er du sikker på, at du vil rydde tidsloggen?",
 							status_listening:					"Hører efter",
 							status_playing:						"Spiller"
 						};
 					case "de":		// German
 						return {
-							clear_log:							"Möchtest du das Zeitprotokoll wirklich löschen?",
+							clear_log:						"Möchtest du das Zeitprotokoll wirklich löschen?",
 							status_listening:					"Hören",
 							status_playing:						"Spielen"
 						};
 					case "el":		// Greek
 						return {
-							clear_log:							"Είστε βέβαιοι ότι θέλετε να διαγράψετε το ημερολόγιο ώρας;",
+							clear_log:						"Είστε βέβαιοι ότι θέλετε να διαγράψετε το ημερολόγιο ώρας;",
 							status_listening:					"Ακούγοντας",
 							status_playing:						"Παιχνίδι"
 						};
 					case "es":		// Spanish
 						return {
-							clear_log:							"¿Está seguro de que desea borrar el registro de tiempo?",
+							clear_log:						"¿Está seguro de que desea borrar el registro de tiempo?",
 							status_listening:					"Escuchando",
 							status_playing:						"Jugando"
 						};
 					case "fi":		// Finnish
 						return {
-							clear_log:							"Haluatko varmasti tyhjentää aikalokin?",
+							clear_log:						"Haluatko varmasti tyhjentää aikalokin?",
 							status_listening:					"Kuunteleminen",
 							status_playing:						"Pelataan"
 						};
 					case "fr":		// French
 						return {
-							clear_log:							"Voulez-vous vraiment effacer le journal de temps?",
+							clear_log:						"Voulez-vous vraiment effacer le journal de temps?",
 							status_listening:					"Écoute",
 							status_playing:						"En jouant"
 						};
 					case "hr":		// Croatian
 						return {
-							clear_log:							"Jeste li sigurni da želite očistiti vremenski zapisnik?",
+							clear_log:						"Jeste li sigurni da želite očistiti vremenski zapisnik?",
 							status_listening:					"Slušanje",
 							status_playing:						"Sviranje"
 						};
 					case "hu":		// Hungarian
 						return {
-							clear_log:							"Biztosan törli az időnaplót?",
+							clear_log:						"Biztosan törli az időnaplót?",
 							status_listening:					"Hallgatás",
 							status_playing:						"Játék"
 						};
 					case "it":		// Italian
 						return {
-							clear_log:							"Sei sicuro di voler cancellare il registro del tempo?",
+							clear_log:						"Sei sicuro di voler cancellare il registro del tempo?",
 							status_listening:					"Ascoltando",
 							status_playing:						"Giocando"
 						};
 					case "ja":		// Japanese
 						return {
-							clear_log:							"タイムログをクリアしてもよろしいですか？",
+							clear_log:						"タイムログをクリアしてもよろしいですか？",
 							status_listening:					"聞いている",
 							status_playing:						"遊ぶ"
 						};
 					case "ko":		// Korean
 						return {
-							clear_log:							"시간 로그를 지우시겠습니까?",
+							clear_log:						"시간 로그를 지우시겠습니까?",
 							status_listening:					"청취",
 							status_playing:						"놀이"
 						};
 					case "lt":		// Lithuanian
 						return {
-							clear_log:							"Ar tikrai norite išvalyti laiko žurnalą?",
+							clear_log:						"Ar tikrai norite išvalyti laiko žurnalą?",
 							status_listening:					"Klausymas",
 							status_playing:						"Žaidžia"
 						};
 					case "nl":		// Dutch
 						return {
-							clear_log:							"Weet u zeker dat u het tijdlogboek wilt wissen?",
+							clear_log:						"Weet u zeker dat u het tijdlogboek wilt wissen?",
 							status_listening:					"Luisteren",
 							status_playing:						"Spelen"
 						};
 					case "no":		// Norwegian
 						return {
-							clear_log:							"Er du sikker på at du vil slette tidsloggen?",
+							clear_log:						"Er du sikker på at du vil slette tidsloggen?",
 							status_listening:					"Lytte",
 							status_playing:						"Spiller"
 						};
 					case "pl":		// Polish
 						return {
-							clear_log:							"Czy na pewno chcesz wyczyścić dziennik czasu?",
+							clear_log:						"Czy na pewno chcesz wyczyścić dziennik czasu?",
 							status_listening:					"Słuchający",
 							status_playing:						"Gra"
 						};
 					case "pt-BR":	// Portuguese (Brazil)
 						return {
-							clear_log:							"Tem certeza de que deseja limpar o registro de horas?",
+							clear_log:						"Tem certeza de que deseja limpar o registro de horas?",
 							status_listening:					"Ouvindo",
 							status_playing:						"Jogando"
 						};
 					case "ro":		// Romanian
 						return {
-							clear_log:							"Sigur doriți să ștergeți jurnalul de timp?",
+							clear_log:						"Sigur doriți să ștergeți jurnalul de timp?",
 							status_listening:					"Ascultare",
 							status_playing:						"Joc"
 						};
 					case "ru":		// Russian
 						return {
-							clear_log:							"Вы уверены, что хотите очистить журнал времени?",
+							clear_log:						"Вы уверены, что хотите очистить журнал времени?",
 							status_listening:					"Прослушивание",
 							status_playing:						"Играет"
 						};
 					case "sv":		// Swedish
 						return {
-							clear_log:							"Är du säker på att du vill rensa tidsloggen?",
+							clear_log:						"Är du säker på att du vill rensa tidsloggen?",
 							status_listening:					"Lyssnande",
 							status_playing:						"Spelar"
 						};
 					case "th":		// Thai
 						return {
-							clear_log:							"แน่ใจไหมว่าต้องการล้างบันทึกเวลา",
+							clear_log:						"แน่ใจไหมว่าต้องการล้างบันทึกเวลา",
 							status_listening:					"การฟัง",
 							status_playing:						"กำลังเล่น"
 						};
 					case "tr":		// Turkish
 						return {
-							clear_log:							"Zaman kaydını temizlemek istediğinizden emin misiniz?",
+							clear_log:						"Zaman kaydını temizlemek istediğinizden emin misiniz?",
 							status_listening:					"Dinleme",
 							status_playing:						"Çalma"
 						};
 					case "uk":		// Ukrainian
 						return {
-							clear_log:							"Ви впевнені, що хочете очистити журнал часу?",
+							clear_log:						"Ви впевнені, що хочете очистити журнал часу?",
 							status_listening:					"Слухання",
 							status_playing:						"Гра"
 						};
 					case "vi":		// Vietnamese
 						return {
-							clear_log:							"Bạn có chắc chắn muốn xóa nhật ký thời gian không?",
+							clear_log:						"Bạn có chắc chắn muốn xóa nhật ký thời gian không?",
 							status_listening:					"Lắng nghe",
 							status_playing:						"Đang chơi"
 						};
 					case "zh-CN":	// Chinese (China)
 						return {
-							clear_log:							"您确定要清除时间记录吗？",
+							clear_log:						"您确定要清除时间记录吗？",
 							status_listening:					"聆听中",
 							status_playing:						"游戏中"
 						};
 					case "zh-TW":	// Chinese (Taiwan)
 						return {
-							clear_log:							"您確定要清除時間記錄嗎？",
+							clear_log:						"您確定要清除時間記錄嗎？",
 							status_listening:					"聆聽中",
 							status_playing:						"遊戲中"
 						};
 					default:		// English
 						return {
-							clear_log:							"Are you sure you want to clear the timelog?",
+							clear_log:						"Are you sure you want to clear the timelog?",
 							status_listening:					"Listening",
 							status_playing:						"Playing"
 						};

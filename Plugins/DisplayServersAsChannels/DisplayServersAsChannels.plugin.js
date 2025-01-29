@@ -2,7 +2,7 @@
  * @name DisplayServersAsChannels
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.7.7
+ * @version 1.8.3
  * @description Displays Servers in a similar way as Channels
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -79,6 +79,7 @@ module.exports = (_ => {
 
 				this.modulePatches = {
 					before: [
+						"GuildItem",
 						"TooltipContainer"
 					],
 					after: [
@@ -167,34 +168,46 @@ module.exports = (_ => {
 			}
 		
 			processGuildsBar (e) {
-				let scroller = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.guildsscroller]]});
-				if (scroller) {
-					scroller.props.fade = true;
-					let padding = parseInt(BDFDB.LibraryModules.PlatformUtils.isWindows() ? 4 : BDFDB.LibraryModules.PlatformUtils.isDarwin() ? 0 : 12) + 10;
-					let isVisible = (currentItem, t, items) => {
-						if (!scroller.ref || !scroller.ref.current) return false;
-						const index = items.findIndex(item => typeof item == "string" || !item ? currentItem === item : item.includes(currentItem));
-						if (index < 0) return false;
-						let size = this.settings.amounts.serverElementHeight * index + padding;
-						if (!t) size += 40;
-						const state = typeof scroller.ref.current.getScrollerState == "function" ? scroller.ref.current.getScrollerState() : Node.prototype.isPrototypeOf(scroller.ref.current) ? scroller.ref.current : {};
-						return !!(!t && size >= state.scrollTop || t && size + parseInt(this.settings.amounts.serverElementHeight) <= state.scrollTop + state.offsetHeight);
-					};
-					let topBar = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.guildswrapperunreadmentionsbartop]]});
-					if (topBar) topBar.props.isVisible = BDFDB.TimeUtils.suppress(isVisible, "Error in isVisible of Top Bar in Guild List!");
-					let bottomBar = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.guildswrapperunreadmentionsbarbottom]]});
-					if (bottomBar) bottomBar.props.isVisible = BDFDB.TimeUtils.suppress(isVisible, "Error in isVisible of Bottom Bar in Guild List!");
+				const process = returnValue => {
+					let scroller = BDFDB.ReactUtils.findChild(returnValue, {props: [["className", BDFDB.disCN.guildsscroller]]});
+					if (scroller) {
+						scroller.props.fade = true;
+						let padding = parseInt(BDFDB.LibraryModules.PlatformUtils.isWindows() ? 4 : BDFDB.LibraryModules.PlatformUtils.isLinux() ? 0 : 12) + 10;
+						let isVisible = (currentItem, t, items) => {
+							if (!scroller.ref || !scroller.ref.current) return false;
+							const index = items.findIndex(item => typeof item == "string" || !item ? currentItem === item : item.includes(currentItem));
+							if (index < 0) return false;
+							let size = this.settings.amounts.serverElementHeight * index + padding;
+							if (!t) size += 40;
+							const state = typeof scroller.ref.current.getScrollerState == "function" ? scroller.ref.current.getScrollerState() : Node.prototype.isPrototypeOf(scroller.ref.current) ? scroller.ref.current : {};
+							return !!(!t && size >= state.scrollTop || t && size + parseInt(this.settings.amounts.serverElementHeight) <= state.scrollTop + state.offsetHeight);
+						};
+						let topBar = BDFDB.ReactUtils.findChild(returnValue, {props: [["className", BDFDB.disCN.guildswrapperunreadmentionsbartop]]});
+						if (topBar) topBar.props.isVisible = BDFDB.TimeUtils.suppress(isVisible, "Error in isVisible of Top Bar in Guild List!");
+						let bottomBar = BDFDB.ReactUtils.findChild(returnValue, {props: [["className", BDFDB.disCN.guildswrapperunreadmentionsbarbottom]]});
+						if (bottomBar) bottomBar.props.isVisible = BDFDB.TimeUtils.suppress(isVisible, "Error in isVisible of Bottom Bar in Guild List!");
+					}
+				};
+				let themeWrapper = BDFDB.ReactUtils.findChild(e.returnvalue, {filter: n => n && n.props && typeof n.props.children == "function"});
+				if (themeWrapper) {
+					let childrenRender = themeWrapper.props.children;
+					themeWrapper.props.children = BDFDB.TimeUtils.suppress((...args) => {
+						let children = childrenRender(...args);
+						process(children);
+						return children;
+					}, "Error in Children Render of Theme Wrapper!", this);
 				}
+				else process(e.returnvalue);
 			}
 			
 			processHomeButtonDefault (e) {
-				this.removeTooltip(e.returnvalue);
+				e.returnvalue = this.removeTooltip(e.returnvalue);
 				e.returnvalue = this.removeMask(e.returnvalue);
 				this.addElementName(e.returnvalue, BDFDB.LanguageUtils.LanguageStrings.HOME);
 			}
 			
 			processGuildFavorites (e) {
-				this.removeTooltip(e.returnvalue);
+				e.returnvalue = this.removeTooltip(e.returnvalue);
 				e.returnvalue = this.removeMask(e.returnvalue);
 				this.addElementName(e.returnvalue, BDFDB.LanguageUtils.LanguageStrings.FAVORITES_GUILD_NAME);
 			}
@@ -203,7 +216,7 @@ module.exports = (_ => {
 				if (!e.instance.props.channel.id) return;
 				if (e.returnvalue.props.children && e.returnvalue.props.children.props) e.returnvalue.props.children.props.className = BDFDB.DOMUtils.formatClassName(e.returnvalue.props.children.props.className, BDFDB.LibraryStores.UserGuildSettingsStore.isChannelMuted(null, e.instance.props.channel.id) && BDFDB.disCN._displayserversaschannelsmuted);
 				let text = BDFDB.ReactUtils.findValue(e.returnvalue, "text");
-				this.removeTooltip(e.returnvalue);
+				e.returnvalue = this.removeTooltip(e.returnvalue);
 				e.returnvalue = this.removeMask(e.returnvalue);
 				this.addElementName(e.returnvalue, text, {
 					isDm: true
@@ -211,27 +224,31 @@ module.exports = (_ => {
 			}
 			
 			processGuildItem (e) {
-				if (!e.instance.props.guild) return;
-				let guildcontainer = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.guildcontainer]]});
-				if (guildcontainer) guildcontainer.props.className = BDFDB.DOMUtils.formatClassName(guildcontainer.props.className, BDFDB.LibraryStores.UserGuildSettingsStore.isMuted(e.instance.props.guild.id) && BDFDB.disCN._displayserversaschannelsmuted);
-				if (!BDFDB.BDUtils.isPluginEnabled("ServerDetails")) this.removeTooltip(e.returnvalue, e.instance.props.guild);
-				e.returnvalue = this.removeMask(e.returnvalue);
-				this.addElementName(e.returnvalue, e.instance.props.guild.name, {
-					badges: [
-						this.settings.general.showGuildIcon && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.GuildIcon, {
-							animate: e.instance.props.animatable && e.instance.state && e.instance.state.hovered,
-							guild: e.instance.props.guild,
-							size: BDFDB.LibraryComponents.GuildIcon.Sizes.SMALLER
-						}),
-						this.settings.general.showGuildBadge && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.GuildBadge, {
-							size: this.settings.amounts.serverElementHeight * 0.5,
-							badgeColor: BDFDB.DiscordConstants.Colors.PRIMARY_400,
-							tooltipColor: BDFDB.LibraryComponents.TooltipContainer.Colors.BLACK,
-							tooltipPosition: BDFDB.LibraryComponents.TooltipContainer.Positions.RIGHT,
-							guild: e.instance.props.guild
-						})
-					]
-				});
+				if (!e.instance.props.guild || typeof e.instance.props?.children?.props?.className != "string" || e.instance.props?.children?.props?.className.indexOf(BDFDB.disCN.guildcontainer) == -1) return;
+				if (!e.returnvalue) {
+					let guildcontainer = BDFDB.ReactUtils.findChild(e.instance, {props: [["className", BDFDB.disCN.guildcontainer]]});
+					if (guildcontainer) guildcontainer.props.className = BDFDB.DOMUtils.formatClassName(guildcontainer.props.className, BDFDB.LibraryStores.UserGuildSettingsStore.isMuted(e.instance.props.guild.id) && BDFDB.disCN._displayserversaschannelsmuted);
+					e.instance.props.children = this.removeMask(e.instance.props.children);
+					this.addElementName(e.instance.props.children, e.instance.props.guild.name, {
+						badges: [
+							this.settings.general.showGuildIcon && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.GuildIcon, {
+								animate: e.instance.props.animatable && e.instance.state && e.instance.state.hovered,
+								guild: e.instance.props.guild,
+								size: BDFDB.LibraryComponents.GuildIcon.Sizes.SMALLER
+							}),
+							this.settings.general.showGuildBadge && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.GuildBadge, {
+								size: this.settings.amounts.serverElementHeight * 0.5,
+								badgeColor: BDFDB.DiscordConstants.Colors.PRIMARY_400,
+								tooltipColor: BDFDB.LibraryComponents.TooltipContainer.Colors.BLACK,
+								tooltipPosition: BDFDB.LibraryComponents.TooltipContainer.Positions.RIGHT,
+								guild: e.instance.props.guild
+							})
+						]
+					});
+				}
+				else {
+					if (!BDFDB.BDUtils.isPluginEnabled("ServerDetails")) e.returnvalue = this.removeTooltip(e.instance.props.children, e.instance.props.guild);
+				}
 			}
 			
 			processGuildBadge (e) {
@@ -287,7 +304,7 @@ module.exports = (_ => {
 			}
 			
 			processCircleIconButton (e) {
-				this.removeTooltip(e.returnvalue);
+				e.returnvalue = this.removeTooltip(e.returnvalue);
 				e.returnvalue = this.removeMask(e.returnvalue);
 				this.addElementName(e.returnvalue, e.instance.props.tooltip, {
 					wrap: true,
@@ -296,7 +313,7 @@ module.exports = (_ => {
 			}
 			
 			processUnavailableGuildsButton (e) {
-				this.removeTooltip(e.returnvalue);
+				e.returnvalue = this.removeTooltip(e.returnvalue);
 				this.addElementName(e.returnvalue, `${e.instance.props.unavailableGuilds} ${e.instance.props.unavailableGuilds == 1 ? "Server" : "Servers"}`, {
 					wrap: true,
 					backgroundColor: "transparent"
@@ -310,22 +327,35 @@ module.exports = (_ => {
 			
 			removeTooltip (parent, guild) {
 				let [children, index] = BDFDB.ReactUtils.findParent(parent, {name: ["ListItemTooltip", "GuildTooltip", "BDFDB_TooltipContainer"]});
-				if (index == -1) return;
-				if (!guild) children[index] = children[index].props.children;
-				else children[index] = BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
-					text: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.GuildVoiceList, {
-						guild: guild
-					}),
-					tooltipConfig: {
-						type: "right"
-					},
-					children: children[index].props.children
-				});
+				if (index == -1) {
+					if (guild) return BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
+						text: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.GuildVoiceList, {
+							guild: guild
+						}),
+						tooltipConfig: {
+							type: "right"
+						},
+						children: parent
+					});
+				}
+				else {
+					if (!guild) children[index] = children[index].props.children;
+					else children[index] = BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
+						text: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.GuildVoiceList, {
+							guild: guild
+						}),
+						tooltipConfig: {
+							type: "right"
+						},
+						children: children[index].props.children
+					});
+				}
+				return parent;
 			}
 			
 			removeMask (parent) {
 				let [children, index] = BDFDB.ReactUtils.findParent(parent, {name: "BlobMask"});
-				let parentIsMask = index == -1 && parent.type.prototype && parent.type.prototype && typeof parent.type.prototype.getLowerBadgeStyles == "function";
+				let parentIsMask = index == -1 && typeof parent.type == "function" && parent.type.toString().indexOf("BlobMask") > -1;
 				if (parentIsMask) [children, index] = [[parent], 0];
 				if (index > -1) {
 					let badges = [];
@@ -413,12 +443,14 @@ module.exports = (_ => {
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildswrapperunreadmentionsbarbottom} {
 						width: ${this.settings.amounts.serverListWidth}px;
 					}
-					
+					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildsfooter} {
+						width: 100%;
+						box-sizing: border-box;
+					}
 					${BDFDB.dotCNS.themedark + BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildsscroller}::-webkit-scrollbar-thumb,
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCN.guildswrapper + BDFDB.dotCNS.themedark + BDFDB.dotCN.guildsscroller}::-webkit-scrollbar-thumb {
 						background-color: ${BDFDB.DiscordConstants.Colors.PRIMARY_800};
 					}
-
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildouter} {
 						width: auto;
 						display: flex;
@@ -426,7 +458,6 @@ module.exports = (_ => {
 						margin-bottom: 8px;
 						margin-left: 8px;
 					}
-					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildinnerwrapper},
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.guildinner} {
 						width: ${this.settings.amounts.serverListWidth - 20}px;
 						height: ${this.settings.amounts.serverElementHeight}px;
@@ -495,12 +526,6 @@ module.exports = (_ => {
 					}
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCNS.guildiconchildwrapper + BDFDB.dotCN.badgebase}[style*="width: 30px;"] {
 						width: ${this.settings.amounts.serverElementHeight/32 * 30}px !important;
-					}
-
-					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.homebuttonicon} {
-						width: ${this.settings.amounts.serverElementHeight/32 * 28}px;
-						height: ${this.settings.amounts.serverElementHeight/32 * 20}px;
-						transform: unset;
 					}
 
 					${BDFDB.dotCNS._displayserversaschannelsstyled + BDFDB.dotCNS.guildswrapper + BDFDB.dotCN.avatarwrapper} {

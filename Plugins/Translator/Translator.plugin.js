@@ -2,7 +2,7 @@
  * @name Translator
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 2.6.2
+ * @version 2.6.5
  * @description Allows you to translate Messages and your outgoing Messages within Discord
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -14,7 +14,6 @@
 
 module.exports = (_ => {
 	const changeLog = {
-		
 	};
 	
 	return !window.BDFDB_Global || (!window.BDFDB_Global.loaded && !window.BDFDB_Global.started) ? class {
@@ -127,7 +126,7 @@ module.exports = (_ => {
 								label: _this.labels.exception_text.replace("{{var0}}", _this.settings.exceptions.wordStart.map(n => '"' + n + '"').join(", "))
 							})
 						}),
-						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 							className: BDFDB.disCN.marginbottom8
 						})
 					],
@@ -135,7 +134,7 @@ module.exports = (_ => {
 						let isChannelSpecific = channelLanguages[this.props.channelId] && channelLanguages[this.props.channelId][place];
 						let isGuildSpecific = !isChannelSpecific && guildLanguages[this.props.guildId] && guildLanguages[this.props.guildId][place];
 						return Object.keys(_this.defaults.choices[place].value).map(direction => [
-							BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+							BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 								title: _this.labels[`language_choice_${direction.toLowerCase()}_${place.toLowerCase()}`] + ": ",
 								titleChildren: direction == languageTypes.OUTPUT && [{
 									text: _ => isChannelSpecific ? _this.labels.language_selection_channel : isGuildSpecific ? _this.labels.language_selection_server : _this.labels.language_selection_global,
@@ -236,12 +235,12 @@ module.exports = (_ => {
 									}
 								})
 							}),
-							direction == languageTypes.OUTPUT && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+							direction == languageTypes.OUTPUT && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 								className: BDFDB.disCN.marginbottom8
 							})
 						]);
 					}),
-					Object.keys(_this.defaults.engines).map(key => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+					Object.keys(_this.defaults.engines).map(key => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 						title: _this.labels[`${key}_engine`],
 						className: BDFDB.disCN.marginbottom8,
 						children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Select, {
@@ -261,13 +260,13 @@ module.exports = (_ => {
 						plugin: _this,
 						keys: ["general", key],
 						label: _this.labels[`general_${key}`] || _this.defaults.general[key].description,
-						tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+						tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 						value: _this.settings.general[key]
 					})),
 					BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsItem, {
 						type: "Switch",
 						label: _this.labels.translate_your_message,
-						tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+						tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 						value: _this.isTranslationEnabled(this.props.channelId),
 						onChange: value => {
 							_this.toggleTranslation(this.props.channelId);
@@ -415,9 +414,7 @@ module.exports = (_ => {
 					after: [
 						"ChannelTextAreaButtons",
 						"Embed",
-						"MessageActionsContextMenu",
-						"MessageContent",
-						"MessageToolbar"
+						"MessageContent"
 					]
 				};
 
@@ -438,6 +435,21 @@ module.exports = (_ => {
 				BDFDB.PatchUtils.patch(this, BDFDB.LibraryModules.MessageUtils, "editMessage", {before: e => {
 					delete translatedMessages[e.methodArguments[1]];
 					delete oldMessages[e.methodArguments[1]];
+				}});
+				BDFDB.PatchUtils.patch(this, BDFDB.LibraryModules.MessageToolbarUtils, "useMessageMenu", {after: e => {
+					if (e.instance.props.message && e.instance.props.channel) {
+						let translated = !!translatedMessages[e.instance.props.message.id];
+						let [children, index] = BDFDB.ContextMenuUtils.findItem(e.returnValue, {id: ["pin", "unpin"]});
+						children.splice(index + 1, 0, BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
+							label: translated ? this.labels.context_messageuntranslateoption : this.labels.context_messagetranslateoption,
+							disabled: isTranslating,
+							id: BDFDB.ContextMenuUtils.createItemId(this.name, translated ? "untranslate-message" : "translate-message"),
+							icon: _ => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.MenuItems.MenuIcon, {
+								icon: translated ? translateIconUntranslate : translateIcon
+							}),
+							action: _ => this.translateMessage(e.instance.props.message, e.instance.props.channel)
+						}));
+					}
 				}});
 				this.forceUpdateAll();
 			}
@@ -461,7 +473,7 @@ module.exports = (_ => {
 							value: this.settings.general[key]
 						}));
 						
-						settingsItems.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+						settingsItems.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 							className: BDFDB.disCNS.dividerdefault + BDFDB.disCN.marginbottom8
 						}));
 						
@@ -475,9 +487,9 @@ module.exports = (_ => {
 										align: BDFDB.LibraryComponents.Flex.Align.CENTER,
 										direction: BDFDB.LibraryComponents.Flex.Direction.HORIZONTAL,
 										children: [
-											BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormTitle, {
+											BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormTitle.Title, {
 												className: BDFDB.disCN.marginreset,
-												tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+												tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 												children: translationEngines[key].name
 											}),
 											translationEngines[key].premium && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsItem, {
@@ -485,7 +497,7 @@ module.exports = (_ => {
 												margin: 0,
 												grow: 0,
 												label: "Paid Version",
-												tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+												tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 												value: authKeys[key] && authKeys[key].paid,
 												onChange: value => {
 													if (!authKeys[key]) authKeys[key] = {};
@@ -508,11 +520,11 @@ module.exports = (_ => {
 							}))
 						}));
 						
-						settingsItems.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+						settingsItems.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 							className: BDFDB.disCNS.dividerdefault + BDFDB.disCN.marginbottom8
 						}));
 						
-						for (let key in this.defaults.exceptions) settingsItems.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+						for (let key in this.defaults.exceptions) settingsItems.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 							title: this.labels.exception_text.replace("{{var0}}", "").split(" ").filter(n => n).join(" "),
 							className: BDFDB.disCN.marginbottom8,
 							children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ListInput, {
@@ -559,7 +571,7 @@ module.exports = (_ => {
 					let translated = !!translatedMessages[e.instance.props.message.id];
 					let hint = BDFDB.BDUtils.isPluginEnabled("MessageUtilities") ? BDFDB.BDUtils.getPlugin("MessageUtilities").getActiveShortcutString("__Translate_Message") : null;
 					let [children, index] = BDFDB.ContextMenuUtils.findItem(e.returnvalue, {id: ["pin", "unpin"]});
-					if (index == -1) [children, index] = BDFDB.ContextMenuUtils.findItem(e.returnvalue, {id: ["edit", "add-reaction", "add-reaction-1", "quote"]});
+					if (index == -1) [children, index] = BDFDB.ContextMenuUtils.findItem(e.returnvalue, {id: ["copy-text", "edit", "add-reaction", "add-reaction-1", "quote"]});
 					children.splice(index > -1 ? index + 1 : 0, 0, BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
 						label: translated ? this.labels.context_messageuntranslateoption : this.labels.context_messagetranslateoption,
 						id: BDFDB.ContextMenuUtils.createItemId(this.name, translated ? "untranslate-message" : "translate-message"),
@@ -583,7 +595,7 @@ module.exports = (_ => {
 			injectSearchItem (e, ownMessage) {
 				let text = document.getSelection().toString();
 				if (text) {
-					let translating, foundTranslation, foundInput, foundOutput;
+					let translating, foundTranslation, foundInput, foundOutput, copied;
 					let [children, index] = BDFDB.ContextMenuUtils.findItem(e.returnvalue, {id: ["devmode-copy-id", "search-google"], group: true});
 					children.splice(index > -1 ? index + 1 : 0, 0, BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuGroup, {
 						children: BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
@@ -611,8 +623,15 @@ module.exports = (_ => {
 									};
 									if (foundTranslation && foundInput && foundOutput) {
 										if (document.querySelector(".googletranslate-tooltip")) {
-											BDFDB.ContextMenuUtils.close(e.instance);
-											BDFDB.DiscordUtils.openLink(this.getGoogleTranslatePageURL(foundInput.id, foundOutput.id, text));
+											if (!copied) {
+												copied = true;
+												BDFDB.LibraryModules.WindowUtils.copy(foundTranslation);
+												BDFDB.NotificationUtils.toast(BDFDB.LanguageUtils.LibraryStringsFormat("clipboard_success", BDFDB.LanguageUtils.LanguageStrings.TEXT), {type: "success"});
+											}
+											else {
+												BDFDB.ContextMenuUtils.close(e.instance);
+												BDFDB.DiscordUtils.openLink(this.getGoogleTranslatePageURL(foundInput.id, foundOutput.id, text));
+											}
 										}
 										else createTooltip();
 									}
@@ -633,53 +652,8 @@ module.exports = (_ => {
 				}
 			}
 			
-			processMessageActionsContextMenu (e) {
-				if (e.instance.props.message && e.instance.props.channel) {
-					let translated = !!translatedMessages[e.instance.props.message.id];
-					let [children, index] = BDFDB.ContextMenuUtils.findItem(e.returnvalue, {id: ["pin", "unpin"]});
-					children.splice(index + 1, 0, BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
-						label: translated ? this.labels.context_messageuntranslateoption : this.labels.context_messagetranslateoption,
-						disabled: isTranslating,
-						id: BDFDB.ContextMenuUtils.createItemId(this.name, translated ? "untranslate-message" : "translate-message"),
-						icon: _ => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.MenuItems.MenuIcon, {
-							icon: translated ? translateIconUntranslate : translateIcon
-						}),
-						action: _ => this.translateMessage(e.instance.props.message, e.instance.props.channel)
-					}));
-				}
-			}
-		
-			processMessageToolbar (e) {
-				if (!e.instance.props.message || !e.instance.props.channel) return;
-				let expanded = !BDFDB.LibraryStores.AccessibilityStore.keyboardModeEnabled && !e.instance.props.showEmojiPicker && !e.instance.props.showEmojiBurstPicker && !e.instance.props.showMoreUtilities && BDFDB.ListenerUtils.isPressed(16);
-				if (!expanded) return;
-				let translated = !!translatedMessages[e.instance.props.message.id];
-				e.returnvalue.props.children.unshift();
-				e.returnvalue.props.children.unshift(BDFDB.ReactUtils.createElement(class extends BdApi.React.Component {
-					render() {
-						return BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
-							key: translated ? "untranslate-message" : "translate-message",
-							text: _ => translated ? _this.labels.context_messageuntranslateoption : _this.labels.context_messagetranslateoption,
-							children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Clickable, {
-								className: BDFDB.disCN.messagetoolbarbutton,
-								onClick: _ => {
-									if (!isTranslating) _this.translateMessage(e.instance.props.message, e.instance.props.channel).then(_ => {
-										translated = !!translatedMessages[e.instance.props.message.id];
-										BDFDB.ReactUtils.forceUpdate(this);
-									});
-								},
-								children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SvgIcon, {
-									className: BDFDB.disCN.messagetoolbaricon,
-									iconSVG: translated ? translateIconUntranslate : translateIcon
-								})
-							})
-						});
-					}
-				}));
-			}
-			
 			processChannelTextAreaContainer (e) {
-				if (e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL_WITH_ACTIVITY && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) return;
+				if (e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) return;
 				BDFDB.PatchUtils.patch(this, e.instance.props, "onSubmit", {instead: e2 => {
 					if (this.isTranslationEnabled(e.instance.props.channel.id) && e2.methodArguments[0].value) {
 						e2.stopOriginalMethodCall();
@@ -701,7 +675,7 @@ module.exports = (_ => {
 			}
 			
 			processChannelTextAreaButtons (e) {
-				if (!this.settings.general.addTranslateButton || e.instance.props.disabled || e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL_WITH_ACTIVITY && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) return;
+				if (!this.settings.general.addTranslateButton || e.instance.props.disabled || e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) return;
 				if (e.returnvalue) e.returnvalue.props.children.unshift(BDFDB.ReactUtils.createElement(TranslateButtonComponent, {
 					guildId: e.instance.props.channel.guild_id ? e.instance.props.channel.guild_id : "@me",
 					channelId: e.instance.props.channel.id

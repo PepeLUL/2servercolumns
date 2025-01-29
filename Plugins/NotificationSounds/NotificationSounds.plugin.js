@@ -2,7 +2,7 @@
  * @name NotificationSounds
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 3.9.6
+ * @version 4.0.1
  * @description Allows you to replace the native Sounds with custom Sounds
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -69,7 +69,7 @@ module.exports = (_ => {
 		
 		var currentDevice = defaultDevice, createdAudios = {};
 		
-		let types = {};
+		let types = {}, soundPacks = [];
 		
 		const message1Types = {
 			dm:		{src: "./message3.mp3", name: "Message (Direct Message)"},
@@ -186,6 +186,7 @@ module.exports = (_ => {
 			}
 			
 			onStart () {
+				soundPacks = [];
 				const soundKeys = BDFDB.LibraryModules.SoundParser.keys();
 				for (let key of soundKeys) {	
 					const id = key.replace("./", "").replace(".mp3", "");
@@ -193,7 +194,8 @@ module.exports = (_ => {
 					const src = BDFDB.LibraryModules.SoundParser(key);	
 					
 					let soundPackName = id.split("_")[0];
-					if (soundPackName != id && soundKeys.filter(n => n.indexOf(`./${soundPackName}`) > -1).length > 10) {
+					if (soundPackName != id && soundKeys.filter(n => n.indexOf(`./${soundPackName}`) > -1).length > 8) {
+						soundPacks.push(soundPackName);
 						soundPackName = BDFDB.StringUtils.upperCaseFirstChar(soundPackName);
 						if (!defaultAudios[soundPackName]) defaultAudios[soundPackName] = {};
 						defaultAudios[soundPackName][name.replace(new RegExp(`${soundPackName} `, "i"), "").replace(/bootup/i, "Discodo")] = src;
@@ -394,7 +396,7 @@ module.exports = (_ => {
 									className: BDFDB.disCN.margintop4,
 									children: [
 										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex.Child, {
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 												title: "Categoryname",
 												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
 													className: "input-newsound input-category",
@@ -404,7 +406,7 @@ module.exports = (_ => {
 											})
 										}),
 										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex.Child, {
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 												title: "Soundname",
 												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
 													className: "input-newsound input-sound",
@@ -420,13 +422,12 @@ module.exports = (_ => {
 									align: BDFDB.LibraryComponents.Flex.Align.END,
 									children: [
 										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex.Child, {
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 												title: "Source",
 												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
 													className: "input-newsound input-source",
 													type: "file",
 													filter: ["audio", "video"],
-													useFilePath: true,
 													value: "",
 													placeholder: "Source"
 												})
@@ -438,18 +439,16 @@ module.exports = (_ => {
 												for (let input of settingsPanel.props._node.querySelectorAll(".input-newsound " + BDFDB.dotCN.input)) if (!input.value || input.value.length == 0 || input.value.trim().length == 0) return BDFDB.NotificationUtils.toast("Fill out all Fields to add a new Sound", {type: "danger"});
 												let category = settingsPanel.props._node.querySelector(".input-category " + BDFDB.dotCN.input).value.trim();
 												let sound = settingsPanel.props._node.querySelector(".input-sound " + BDFDB.dotCN.input).value.trim();
-												let source = settingsPanel.props._node.querySelector(".input-source " + BDFDB.dotCN.input).value.trim();
-												if (source.indexOf("http") == 0) BDFDB.LibraryRequires.request(source, (error, response, result) => {
+												let source = settingsPanel.props._node.querySelector(".input-source " + BDFDB.dotCN.input);
+												let value = source && (source.getAttribute("file") || source.value).trim();
+												if (value.indexOf("http") == 0) BDFDB.LibraryRequires.request(value, (error, response, result) => {
 													if (response) {
 														let type = response.headers["content-type"];
-														if (type && (type.indexOf("octet-stream") > -1 || type.indexOf("audio") > -1 || type.indexOf("video") > -1)) return successSavedAudio({category, sound, source});
+														if (type && (type.indexOf("octet-stream") > -1 || type.indexOf("audio") > -1 || type.indexOf("video") > -1)) return successSavedAudio({category, sound, source: value});
 													}
 													BDFDB.NotificationUtils.toast("Use a valid direct link to a video or audio source, they usually end on something like .mp3, .mp4 or .wav", {type: "danger"});
 												});
-												else BDFDB.LibraryRequires.fs.readFile(source, "base64", (error, body) => {
-													if (error) BDFDB.NotificationUtils.toast("Could not fetch file. Please make sure the file exists.", {type: "danger"});
-													else return successSavedAudio({category, sound, source: `data:audio/mpeg;base64,${body}`});
-												});
+												else if (value.indexOf("data:") == 0) return successSavedAudio({category, sound, source: value});
 											},
 											children: BDFDB.LanguageUtils.LanguageStrings.SAVE
 										})
@@ -505,7 +504,7 @@ module.exports = (_ => {
 											grow: 0,
 											shrink: 0,
 											basis: "31%",
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 												title: "Category",
 												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Select, {
 													value: choices[type].category,
@@ -525,7 +524,7 @@ module.exports = (_ => {
 											grow: 0,
 											shrink: 0,
 											basis: "31%",
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 												title: "Sound",
 												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Select, {
 													value: choices[type].sound,
@@ -543,7 +542,7 @@ module.exports = (_ => {
 											grow: 0,
 											shrink: 0,
 											basis: "31%",
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 												title: "Volume",
 												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Slider, {
 													defaultValue: choices[type].volume,
@@ -560,7 +559,7 @@ module.exports = (_ => {
 										})
 									]
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 									className: BDFDB.disCN.marginbottom8
 								})
 							]).flat(10).filter(n => n)
@@ -580,7 +579,7 @@ module.exports = (_ => {
 										grow: 0,
 										shrink: 0,
 										basis: "35%",
-										children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+										children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 											title: "Category",
 											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Select, {
 												key: "REMOVE_CATEGORY",
@@ -589,8 +588,8 @@ module.exports = (_ => {
 												searchable: true,
 												onChange: (category, instance) => {
 													let soundSelectIns = BDFDB.ReactUtils.findOwner(BDFDB.ReactUtils.findOwner(instance, {name: ["BDFDB_Modal", "BDFDB_SettingsPanel"], up: true}), {key: "REMOVE_SOUND"});
-													if (soundSelectIns && removeableSounds[category.value]) {
-														soundSelectIns.props.options = removeableSounds[category.value];
+													if (soundSelectIns && removeableSounds[category]) {
+														soundSelectIns.props.options = removeableSounds[category];
 														soundSelectIns.props.value = removeAllKey;
 														BDFDB.ReactUtils.forceUpdate(soundSelectIns);
 													}
@@ -602,7 +601,7 @@ module.exports = (_ => {
 										grow: 0,
 										shrink: 0,
 										basis: "35%",
-										children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+										children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 											title: "Sound",
 											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Select, {
 												key: "REMOVE_SOUND",
@@ -710,6 +709,7 @@ module.exports = (_ => {
 			}
 
 			playAudio (type, functionCall = "play", duration = 0) {
+				type = soundPacks.some(soundPack => type.startsWith(soundPack + "_")) ? type.split("_").splice(1).join("_") : type;
 				if (this.dontPlayAudio(type) || BDFDB.LibraryStores.StreamerModeStore.disableSounds) return;
 				if (createdAudios[type]) createdAudios[type].stop();
 				createdAudios[type] = new WebAudioSound(type);

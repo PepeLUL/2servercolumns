@@ -2,7 +2,7 @@
  * @name ChatAliases
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 2.4.6
+ * @version 2.4.8
  * @description Allows you to configure your own Aliases/Commands
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -14,8 +14,8 @@
 
 module.exports = (_ => {
 	const changeLog = {
-		"improved": {
-			"Alias Order": "Automatically sets a higher priority for longer aliases, to avoid short aliases from overwritting longer ones"
+		"fixed": {
+			"Alias Length": "No longer cuts of Aliases after 1200 Characters"
 		}
 	};
 
@@ -225,8 +225,8 @@ module.exports = (_ => {
 									"Regex: Will treat the entered Word Value as a Regular Expression - ",
 									BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Anchor, {href: "https://regexr.com/", children: BDFDB.LanguageUtils.LanguageStrings.HELP + "?"})
 								]
-							].map(string => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormText, {
-								type: BDFDB.LibraryComponents.FormComponents.FormText.Types.DESCRIPTION,
+							].map(string => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormText.Text, {
+								type: BDFDB.LibraryComponents.FormText.Types.DESCRIPTION,
 								children: string
 							}))
 						}));
@@ -285,7 +285,7 @@ module.exports = (_ => {
 			}
 			
 			shouldInject (type) {
-				return this.settings.places.normal && (type == BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL || type == BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL_WITH_ACTIVITY || type == BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) || this.settings.places.edit && type == BDFDB.DiscordConstants.ChannelTextAreaTypes.EDIT;
+				return this.settings.places.normal && (type == BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL || type == BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) || this.settings.places.edit && type == BDFDB.DiscordConstants.ChannelTextAreaTypes.EDIT;
 			}
 
 			formatText (text) {
@@ -361,13 +361,14 @@ module.exports = (_ => {
 			
 			createInputs (values) {
 				return [
-					BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+					BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 						title: "Replace:",
 						className: BDFDB.disCN.marginbottom8,
 						children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
 							value: values.wordValue,
 							placeholder: values.wordValue,
 							errorMessage: !values.wordValue && "Choose a Word Value" || aliases[values.wordValue] && "Word Value already used, saving will overwrite old Alias",
+							maxLength: 1950,
 							onChange: (value, instance) => {
 								values.wordValue = value.trim();
 								if (!values.wordValue) instance.props.errorMessage = "Choose a Word Value";
@@ -378,7 +379,7 @@ module.exports = (_ => {
 							}
 						})
 					}),
-					BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+					BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 						title: "With:",
 						className: BDFDB.disCN.marginbottom8,
 						children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
@@ -386,6 +387,7 @@ module.exports = (_ => {
 							placeholder: values.replaceValue,
 							autoFocus: true,
 							errorMessage: !values.replaceValue && "Choose a Replacement Value",
+							maxLength: 1950,
 							onChange: (value, instance) => {
 								values.replaceValue = value.trim();
 								if (!values.replaceValue) instance.props.errorMessage = "Choose a Replacement Value";

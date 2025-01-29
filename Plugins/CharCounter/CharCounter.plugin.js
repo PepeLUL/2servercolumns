@@ -2,7 +2,7 @@
  * @name CharCounter
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.6.3
+ * @version 1.6.6
  * @description Adds a Character Counter to most Inputs
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -68,9 +68,10 @@ module.exports = (_ => {
 		};
 		const typeMap = {
 			normal: "chat",
+			form: "upload",
 			sidebar: "chat",
 			thread_creation: "threadcreation",
-			form: "upload"
+			user_profile: "userprofile"
 		};
 		const nativeCounters = ["profile_bio_input"];
 	
@@ -93,6 +94,7 @@ module.exports = (_ => {
 				this.css = `
 					${BDFDB.dotCN._charcountercounteradded} {
 						position: relative !important;
+						width: 100%;
 					}
 					${BDFDB.dotCN._charcountercounter} {
 						display: block;
@@ -113,9 +115,10 @@ module.exports = (_ => {
 						right: 16px;
 						bottom: 0.3em;
 					}
-					${BDFDB.dotCN._charcounteruploadcounter} {
+					${BDFDB.dotCN._charcounteruserprofilecounter} {
 						right: 0;
-						bottom: -1.0em;
+						bottom: -1.3em;
+						font-size: 12px;
 					}
 					${BDFDB.dotCN._charcountercustomstatuscounter} {
 						right: 0 !important;
@@ -131,7 +134,8 @@ module.exports = (_ => {
 						bottom: -10px !important;
 						font-size: 12px !important;
 					}
-					${BDFDB.dotCN.usernotetextarea}:not(:focus) ~ ${BDFDB.dotCN._charcountercounter} {
+					${BDFDB.dotCN.usernotetextarea}:not(:focus) ~ ${BDFDB.dotCN._charcountercounter},
+					${BDFDB.dotCNS.userpopoutouter + BDFDB.dotCN.textareawrapall}:not(:focus-within) ~ ${BDFDB.dotCN._charcountercounter} {
 						display: none;
 					}
 				`;
@@ -217,10 +221,14 @@ module.exports = (_ => {
 					parsing: parsing,
 					max: maxLengths[type] || (BDFDB.LibraryModules.NitroUtils.canUseIncreasedMessageLength(BDFDB.LibraryStores.UserStore.getCurrentUser()) ? BDFDB.DiscordConstants.MAX_MESSAGE_LENGTH_PREMIUM : BDFDB.DiscordConstants.MAX_MESSAGE_LENGTH),
 					showPercentage: this.settings.sliders.showPercentage,
+					style: {visibility: "hidden"},
 					onChange: instance => {
 						let node = BDFDB.ReactUtils.findDOMNode(instance);
+						node && node.style.removeProperty("visibility");
 						let form = node && BDFDB.DOMUtils.getParent(BDFDB.dotCN.chatform, node);
 						if (form) {
+							let widthDifference = BDFDB.DOMUtils.getWidth(form.firstElementChild) - BDFDB.DOMUtils.getWidth(node.parentElement);
+							if (widthDifference > 0) node.style.setProperty("right", `-${widthDifference}px`);
 							let typing = form.querySelector(BDFDB.dotCN.typing);
 							if (typing) typing.style.setProperty("margin-right", `${BDFDB.DOMUtils.getWidth(node) + 10}px`);
 						}

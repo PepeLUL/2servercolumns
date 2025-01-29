@@ -2,8 +2,8 @@
  * @name CustomStatusPresets
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.1.5
- * @description Allows you to save Custom Statuses as Quick Select
+ * @version 1.2.5
+ * @description Allows you to save Custom Statuses as Quick Select and select them by right-clicking the Status Bubble
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
  * @patreon https://www.patreon.com/MircoWittrien
@@ -68,13 +68,11 @@ module.exports = (_ => {
 			HOURS_1: 3600000,
 			HOURS_4: 14400000,
 			MINUTES_30: 1800000,
+			DONT_CLEAR: "DONT_CLEAR",
 			TODAY: "TODAY"
 		};
 		
 		const CustomStatusInputComponent = class CustomStatusInput extends BdApi.React.Component {
-			handleChange() {
-				this.props.onChange(this.props);
-			}
 			render() {
 				return BDFDB.ReactUtils.createElement("div", {
 					className: BDFDB.disCN.emojiinputcontainer,
@@ -84,7 +82,11 @@ module.exports = (_ => {
 							className: BDFDB.disCN.emojiinputbuttoncontainer,
 							children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.EmojiPickerButton, {
 								emoji: this.props.emoji,
-								onSelect: this.handleChange.bind(this)
+								onSelect: value => {
+									this.props.emoji = value;
+									this.props.onChange(this.props);
+									BDFDB.ReactUtils.forceUpdate(this);
+								}
 							})
 						}),
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
@@ -93,7 +95,11 @@ module.exports = (_ => {
 							maxLength: 128,
 							value: this.props.text,
 							placeholder: this.props.text,
-							onChange: this.handleChange.bind(this)
+							onChange: value => {
+								this.props.text = value;
+								this.props.onChange(this.props);
+								BDFDB.ReactUtils.forceUpdate(this);
+							}
 						}),
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Button, {
 							size: BDFDB.LibraryComponents.Button.Sizes.NONE,
@@ -105,8 +111,8 @@ module.exports = (_ => {
 							}),
 							onClick: (e, instance) => {
 								this.props.text = "";
-								delete this.props.text;
-								this.handleChange();
+								delete this.props.emoji;
+								this.props.onChange(this.props);
 								BDFDB.ReactUtils.forceUpdate(this);
 							}
 						})
@@ -205,6 +211,15 @@ module.exports = (_ => {
 										}
 									})
 								}),
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Select, {
+									className: BDFDB.disCN.flexchild,
+									value: presets[id].clearAfter,
+									options: Object.entries(ClearAfterValues).map(entry => ({value: entry[0], label: !entry[1] || entry[1] == ClearAfterValues.DONT_CLEAR ? BDFDB.LanguageUtils.LanguageStrings.DISPLAY_OPTION_NEVER : entry[1] == ClearAfterValues.TODAY ? BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_TODAY : BDFDB.LanguageUtils.LanguageStringsFormat("CUSTOM_STATUS_HOURS", entry[1]/3600000)})),
+									onChange: value => {
+										presets[id].clearAfter = value;
+										BDFDB.DataUtils.save(presets, _this, "presets");
+									}
+								}),
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex.Child, {
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Switch, {
 										value: !presets[id].disabled,
@@ -232,11 +247,10 @@ module.exports = (_ => {
 				_this = this;
 				
 				this.modulePatches = {
-					before: [
-						"Menu"
-					],
 					after: [
-						"CustomStatusModal"
+						"CustomStatusModal",
+						"UserPopoutStatusBubble",
+						"UserPopoutStatusBubbleEmpty"
 					]
 				};
 				
@@ -260,33 +274,13 @@ module.exports = (_ => {
 						overflow: visible;
 						white-space: unset;
 					}
-					#status-picker${BDFDB.dotCN.menu} #status-picker-custom-status ${BDFDB.dotCN.customstatusitem} {
-						grid-template-rows: minmax(24px, auto) 1fr;
-					}
-					#status-picker${BDFDB.dotCN.menu} #status-picker-custom-status ${BDFDB.dotCN.customstatusitemcustom},
-					#status-picker${BDFDB.dotCN.menu} #status-picker-custom-status ${BDFDB.dotCN.customstatusitemcustomwithemoji} {
-						display: flex;
-						padding-right: 0;
-						padding-left: 0;
-					}
-					#status-picker${BDFDB.dotCN.menu} #status-picker-custom-status ${BDFDB.dotCNS.customstatusitemcustomwithemoji + BDFDB.dotCN.customstatusitememoji} {
-						margin-left: 4px;
-						order: 3;
-					}
-					#status-picker${BDFDB.dotCN.menu} #status-picker-custom-status ${BDFDB.dotCN.customstatusitemcustomtext} {
-						flex: 1 1 auto;
-						max-width: 126px;
-						overflow: hidden;
-						order: 2;
-					}
-					#status-picker${BDFDB.dotCN.menu} #status-picker-custom-status ${BDFDB.dotCN.customstatusitemclearbutton} {
-						margin-right: 10px;
-						margin-left: 2px;
-						order: 1;
-					}
 					${BDFDB.dotCN._customstatuspresetscustomstatusitem} {
 						display: flex;
 						align-items: center;
+					}
+					${BDFDB.dotCNS._customstatuspresetscustomstatusitem + BDFDB.dotCN.menuiconcontainer} {
+						margin-left: 0;
+						margin-right: 6px;
 					}
 					${BDFDB.dotCN._customstatuspresetsdeletebutton} {
 						display: flex;
@@ -339,72 +333,87 @@ module.exports = (_ => {
 				BDFDB.PatchUtils.forceAllUpdates(this);
 			}
 			
-			processMenu (e) {
-				if (e.instance.props.navId != "status-picker" && e.instance.props.navId != "account") return;
-				let enabledPresets = BDFDB.ObjectUtils.filter(presets, id => !presets[id].disabled, true);
-				if (!Object.keys(enabledPresets).length) return;
-				let [children, index] = BDFDB.ContextMenuUtils.findItem(e.instance, {id: ["custom-status", "set-custom-status", "edit-custom-status"]});
-				if (index > -1 && children[index].props && !children[index].props.children) {
-					let render = children[index].props.render || children[index].props.label;
-					delete children[index].props.render;
-					delete children[index].props.label;
-					children[index] = BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, Object.assign({}, children[index].props, {
-						label: typeof render == "function" ? render() : render,
-						children: Object.keys(BDFDB.ObjectUtils.sort(enabledPresets, "pos")).map(id => BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
-							id: BDFDB.ContextMenuUtils.createItemId(this.name, "custom-status-preset", id),
-							label: BDFDB.ReactUtils.createElement("div", {
-								className: BDFDB.disCN._customstatuspresetscustomstatusitem,
-								children: [
-									BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
-										text: BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_CLEAR_CUSTOM_STATUS,
-										tooltipConfig: {
-											zIndex: 2001
-										},
-										children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Clickable, {
-											className: BDFDB.disCN._customstatuspresetsdeletebutton,
-											onClick: _ => {
-												delete presets[id];
-												let pos = 0, sortedPresets = BDFDB.ObjectUtils.sort(presets, "pos");
-												for (let id in sortedPresets) presets[id].pos = pos++;
-												BDFDB.DataUtils.save(presets, this, "presets");
+			processUserPopoutStatusBubble (e) {
+				let container = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.userpopoutstatusbubbleeditable]]});
+				this.processUserPopoutStatusBubbleEmpty(Object.assign({}, e, {returnvalue: container}));
+			}
+			
+			processUserPopoutStatusBubbleEmpty (e) {
+				if (e.instance.props.profileType != BDFDB.DiscordConstants.ProfileTypes.BITE_SIZE) return;
+				let onContextMenu = e.returnvalue.props.onContextMenu;
+				e.returnvalue.props.onContextMenu = BDFDB.TimeUtils.suppress(event => {
+					onContextMenu && onContextMenu(event);
+					let enabledPresets = BDFDB.ObjectUtils.filter(presets, id => !presets[id].disabled, true);
+					BDFDB.ContextMenuUtils.open(this, event, BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuGroup, {
+						children: !Object.keys(enabledPresets).length ? BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
+								id: BDFDB.ContextMenuUtils.createItemId(this.name, "no-presets"),
+								label: this.labels.contextmenu_no_presets,
+								disabled: true
+							}) : Object.keys(BDFDB.ObjectUtils.sort(enabledPresets, "pos")).map(id => {
+							let imageUrl = presets[id].emojiInfo && (presets[id].emojiInfo.id ? BDFDB.LibraryModules.IconUtils.getEmojiURL(presets[id].emojiInfo) : BDFDB.LibraryModules.EmojiStateUtils.getURL(presets[id].emojiInfo.name));
+							return BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
+								id: BDFDB.ContextMenuUtils.createItemId(this.name, "custom-status-preset", id),
+								label: BDFDB.ReactUtils.createElement("div", {
+									className: BDFDB.disCN._customstatuspresetscustomstatusitem,
+									children: [
+										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
+											text: BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_CLEAR_CUSTOM_STATUS,
+											tooltipConfig: {
+												zIndex: 2001
 											},
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SvgIcon, {
-												className: BDFDB.disCN._customstatuspresetsdeleteicon,
-												name: BDFDB.LibraryComponents.SvgIcon.Names.CLOSE_CIRCLE,
-												width: 14,
-												height: 14
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Clickable, {
+												className: BDFDB.disCN._customstatuspresetsdeletebutton,
+												onClick: _ => {
+													delete presets[id];
+													let pos = 0, sortedPresets = BDFDB.ObjectUtils.sort(presets, "pos");
+													for (let id in sortedPresets) presets[id].pos = pos++;
+													BDFDB.DataUtils.save(presets, this, "presets");
+												},
+												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SvgIcon, {
+													className: BDFDB.disCN._customstatuspresetsdeleteicon,
+													name: BDFDB.LibraryComponents.SvgIcon.Names.CLOSE_CIRCLE,
+													width: 14,
+													height: 14
+												})
 											})
+										}),
+										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.StatusComponents.Status, {
+											className: BDFDB.disCN._customstatuspresetsstatus,
+											status: presets[id].status || BDFDB.LibraryComponents.StatusComponents.Types.ONLINE
+										}),
+										!imageUrl ? null : BDFDB.ReactUtils.createElement("div", {
+											className: BDFDB.disCN.menuiconcontainer,
+											children: BDFDB.ReactUtils.createElement("img", {
+												className: BDFDB.disCN.menuicon,
+												src: imageUrl,
+												alt: ""
+											})
+										}),
+										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextScroller, {
+											children: presets[id].text
 										})
-									}),
-									BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.StatusComponents.Status, {
-										className: BDFDB.disCN._customstatuspresetsstatus,
-										status: presets[id].status || BDFDB.LibraryComponents.StatusComponents.Types.ONLINE
-									}),
-									BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextScroller, {
-										children: presets[id].text
-									})
-								]
-							}),
-							imageUrl: presets[id].emojiInfo && (presets[id].emojiInfo.id ? BDFDB.LibraryModules.IconUtils.getEmojiURL(presets[id].emojiInfo) : BDFDB.LibraryModules.EmojiStateUtils.getURL(presets[id].emojiInfo.name)),
-							hint: !presets[id].clearAfter ? BDFDB.LanguageUtils.LanguageStrings.DISPLAY_OPTION_NEVER : presets[id].clearAfter == ClearAfterValues.TODAY ? BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_TODAY : BDFDB.LanguageUtils.LanguageStringsFormat("CUSTOM_STATUS_HOURS", presets[id].clearAfter/3600000),
-							action: _ => {
-								if (!presets[id]) return;
-								let expiresAt = presets[id].clearAfter ? presets[id].clearAfter : null;
-								if (presets[id].clearAfter === ClearAfterValues.TODAY) {
-									let date = new Date;
-									expiresAt = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime() - date.getTime();
+									]
+								}),
+								hint: !presets[id].clearAfter || presets[id].clearAfter == ClearAfterValues.DONT_CLEAR ? BDFDB.LanguageUtils.LanguageStrings.DISPLAY_OPTION_NEVER : presets[id].clearAfter == ClearAfterValues.TODAY ? BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_TODAY : BDFDB.LanguageUtils.LanguageStringsFormat("CUSTOM_STATUS_HOURS", presets[id].clearAfter/3600000),
+								action: _ => {
+									if (!presets[id]) return;
+									let expiresAt = presets[id].clearAfter && presets[id].clearAfter != ClearAfterValues.DONT_CLEAR ? presets[id].clearAfter : null;
+									if (presets[id].clearAfter === ClearAfterValues.TODAY) {
+										let date = new Date;
+										expiresAt = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime() - date.getTime();
+									}
+									if (presets[id].status) BDFDB.DiscordUtils.setSetting("status", "status", presets[id].status);
+									BDFDB.DiscordUtils.setSetting("status", "customStatus", {
+										text: presets[id].text && presets[id].text.length > 0 ? presets[id].text : "",
+										expiresAtMs: expiresAt ? BDFDB.DiscordObjects.Timestamp().add(expiresAt, "ms").toDate().getTime().toString() : "0",
+										emojiId: presets[id].emojiInfo ? presets[id].emojiInfo.id : "0",
+										emojiName: presets[id].emojiInfo ? presets[id].emojiInfo.name : ""
+									});
 								}
-								if (presets[id].status) BDFDB.DiscordUtils.setSetting("status", "status", presets[id].status);
-								BDFDB.DiscordUtils.setSetting("status", "customStatus", {
-									text: presets[id].text && presets[id].text.length > 0 ? presets[id].text : "",
-									expiresAtMs: expiresAt ? BDFDB.DiscordObjects.Timestamp().add(expiresAt, "ms").toDate().getTime().toString() : "0",
-									emojiId: presets[id].emojiInfo ? presets[id].emojiInfo.id : "0",
-									emojiName: presets[id].emojiInfo ? presets[id].emojiInfo.name : ""
-								});
-							}
-						}))
+							});
+						})
 					}));
-				}
+				}, "", this);
 			}
 			
 			processCustomStatusModal (e) {
@@ -428,110 +437,152 @@ module.exports = (_ => {
 				switch (BDFDB.LanguageUtils.getLanguage().id) {
 					case "bg":		// Bulgarian
 						return {
+							contextmenu_no_presets:					"Няма запазени бързи избори",
 							modal_savepreset:					"Запазване като бърз избор"
+						};
+					case "cs":		// Czech
+						return {
+							contextmenu_no_presets:					"Nebyly uloženy žádné rychlé volby",
+							modal_savepreset:					"Uložit jako Rychlý výběr"
 						};
 					case "da":		// Danish
 						return {
+							contextmenu_no_presets:					"Ingen hurtige valg er gemt",
 							modal_savepreset:					"Gem som hurtigvalg"
 						};
 					case "de":		// German
 						return {
+							contextmenu_no_presets:					"Keine Schnellauswahl gespeichert",
 							modal_savepreset:					"Als Schnellauswahl speichern"
 						};
 					case "el":		// Greek
 						return {
-							modal_savepreset:					"Αποθήκευση ως γρήγορη επιλογή"
+							contextmenu_no_presets:					"Δεν έχουν αποθηκευτεί Γρήγορες Επιλογές",
+							modal_savepreset:					"Αποθήκευση ως Γρήγορη επιλογή"
 						};
 					case "es":		// Spanish
 						return {
+							contextmenu_no_presets:					"No se han guardado selecciones rápidas",
+							modal_savepreset:					"Guardar como selección rápida"
+						};
+					case "es-419":		// Spanish (Latin America)
+						return {
+							contextmenu_no_presets:					"No se han guardado selecciones rápidas",
 							modal_savepreset:					"Guardar como selección rápida"
 						};
 					case "fi":		// Finnish
 						return {
+							contextmenu_no_presets:					"Pikavalintoja ei ole tallennettu",
 							modal_savepreset:					"Tallenna pikavalintana"
 						};
 					case "fr":		// French
 						return {
+							contextmenu_no_presets:					"Aucune sélection rapide enregistrée",
 							modal_savepreset:					"Enregistrer en tant que sélection rapide"
+						};
+					case "hi":		// Hindi
+						return {
+							contextmenu_no_presets:					"कोई त्वरित चयन सहेजा नहीं गया",
+							modal_savepreset:					"त्वरित चयन के रूप में सहेजें"
 						};
 					case "hr":		// Croatian
 						return {
+							contextmenu_no_presets:					"Nema spremljenih brzih odabira",
 							modal_savepreset:					"Spremi kao brzi odabir"
 						};
 					case "hu":		// Hungarian
 						return {
-							modal_savepreset:					"Mentés gyorsválasztásként"
+							contextmenu_no_presets:					"Nincs mentett gyorskiválasztás",
+							modal_savepreset:					"Mentés gyorskiválasztásként"
 						};
 					case "it":		// Italian
 						return {
+							contextmenu_no_presets:					"Nessuna selezione rapida salvata",
 							modal_savepreset:					"Salva come selezione rapida"
 						};
 					case "ja":		// Japanese
 						return {
+							contextmenu_no_presets:					"クイック選択は保存されませんでした",
 							modal_savepreset:					"クイック選択として保存"
 						};
 					case "ko":		// Korean
 						return {
+							contextmenu_no_presets:					"빠른 선택이 저장되지 않았습니다.",
 							modal_savepreset:					"빠른 선택으로 저장"
 						};
 					case "lt":		// Lithuanian
 						return {
-							modal_savepreset:					"Išsaugoti kaip greitą pasirinkimą"
+							contextmenu_no_presets:					"Greitųjų pasirinkimų neišsaugota",
+							modal_savepreset:					"Išsaugoti kaip greitąjį pasirinkimą"
 						};
 					case "nl":		// Dutch
 						return {
-							modal_savepreset:					"Opslaan als snel selecteren"
+							contextmenu_no_presets:					"Geen snelle selecties opgeslagen",
+							modal_savepreset:					"Opslaan als Snelselectie"
 						};
 					case "no":		// Norwegian
 						return {
+							contextmenu_no_presets:					"Ingen hurtigvalg lagret",
 							modal_savepreset:					"Lagre som hurtigvalg"
 						};
 					case "pl":		// Polish
 						return {
+							contextmenu_no_presets:					"Nie zapisano żadnych szybkich wyborów",
 							modal_savepreset:					"Zapisz jako Szybki wybór"
 						};
-					case "pt-BR":	// Portuguese (Brazil)
+					case "pt-BR":		// Portuguese (Brazil)
 						return {
+							contextmenu_no_presets:					"Nenhuma seleção rápida salva",
 							modal_savepreset:					"Salvar como seleção rápida"
 						};
 					case "ro":		// Romanian
 						return {
-							modal_savepreset:					"Salvați ca selecție rapidă"
+							contextmenu_no_presets:					"Nicio selecție rapidă salvată",
+							modal_savepreset:					"Salvați ca Selectare rapidă"
 						};
 					case "ru":		// Russian
 						return {
+							contextmenu_no_presets:					"Быстрый выбор не сохранен.",
 							modal_savepreset:					"Сохранить как быстрый выбор"
 						};
 					case "sv":		// Swedish
 						return {
+							contextmenu_no_presets:					"Inga snabbval sparade",
 							modal_savepreset:					"Spara som snabbval"
 						};
 					case "th":		// Thai
 						return {
-							modal_savepreset:					"บันทึกเป็น เลือกด่วน"
+							contextmenu_no_presets:					"ไม่มีการบันทึกการเลือกด่วน",
+							modal_savepreset:					"บันทึกเป็นการเลือกด่วน"
 						};
 					case "tr":		// Turkish
 						return {
+							contextmenu_no_presets:					"Hiçbir Hızlı Seçim kaydedilmedi",
 							modal_savepreset:					"Hızlı Seçim olarak kaydet"
 						};
 					case "uk":		// Ukrainian
 						return {
+							contextmenu_no_presets:					"Немає збережених пунктів швидкого вибору",
 							modal_savepreset:					"Зберегти як швидкий вибір"
 						};
 					case "vi":		// Vietnamese
 						return {
+							contextmenu_no_presets:					"Không có lựa chọn nhanh nào được lưu",
 							modal_savepreset:					"Lưu dưới dạng Chọn nhanh"
 						};
-					case "zh-CN":	// Chinese (China)
+					case "zh-CN":		// Chinese (China)
 						return {
+							contextmenu_no_presets:					"未保存快速选择",
 							modal_savepreset:					"另存为快速选择"
 						};
-					case "zh-TW":	// Chinese (Taiwan)
+					case "zh-TW":		// Chinese (Taiwan)
 						return {
+							contextmenu_no_presets:					"未儲存快速選擇",
 							modal_savepreset:					"另存為快速選擇"
 						};
 					default:		// English
 						return {
+							contextmenu_no_presets:					"No Quick Selects saved",
 							modal_savepreset:					"Save as Quick Select"
 						};
 				}

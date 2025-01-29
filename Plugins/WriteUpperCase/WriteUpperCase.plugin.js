@@ -2,7 +2,7 @@
  * @name WriteUpperCase
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.3.9
+ * @version 1.4.2
  * @description Changes the first Letter of each Sentence in Message Inputs to Uppercase
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -14,7 +14,10 @@
 
 module.exports = (_ => {
 	const changeLog = {
-		
+		fixed: {
+			"User Profile": "Works with the Quick Message Input in User Profile again",
+			"BetterSearchPage": "Fixed an Issue, that could cause crashs with BetterSearchPage"
+		}
 	};
 	
 	return !window.BDFDB_Global || (!window.BDFDB_Global.loaded && !window.BDFDB_Global.started) ? class {
@@ -97,26 +100,18 @@ module.exports = (_ => {
 						normal:			{value: true, 			description: "Normal Message Textarea"},
 						edit:			{value: true, 			description: "Edit Message Textarea"},
 						form:			{value: true, 			description: "Upload Message Prompt"},
-						quickmessage:		{value: true, 			description: "Quick Message Textarea UserPopout"}
+						user_profile:		{value: true, 			description: "Quick Message Textarea UserPopout"}
 					}
 				};
 				
 				this.modulePatches = {
 					before: [
-						"ChannelTextAreaEditor",
-						"TextInput"
+						"ChannelTextAreaEditor"
 					],
 					after: [
-						"ChannelTextAreaButtons",
-						"TextInput"
+						"ChannelTextAreaButtons"
 					]
 				};
-				
-				this.css = `
-					${BDFDB.dotCNS.userpopoutmessageinputcontainer + BDFDB.dotCNS.flex + BDFDB.dotCN.inputwrapper} {
-						flex: 1 1 auto;
-					}
-				`;
 			}
 			
 			onStart () {
@@ -167,7 +162,7 @@ module.exports = (_ => {
 
 			processChannelTextAreaEditor (e) {
 				let type = e.instance.props.type.analyticsName || e.instance.props.type || "";
-				if (e.instance.props.textValue && e.instance.props.focused && (!type || this.settings.places[type] || !this.defaults.places[type]) && (!this.settings.general.addQuickToggle || channelBlacklist.indexOf(e.instance.props.channel.id) == -1)) {
+				if (e.instance.props.textValue && e.instance.props.focused && (!type || this.settings.places[type] || !this.defaults.places[type]) && (!this.settings.general.addQuickToggle || channelBlacklist.indexOf(e.instance.props.channel.id) == -1) && e.instance.props.richValue && e.instance.props.richValue[0] && !e.instance.props.richValue[0].command) {
 					let string = e.instance.props.textValue;
 					let newString = this.parse(string);
 					if (string != newString) {
@@ -192,34 +187,6 @@ module.exports = (_ => {
 						type: type,
 						channelId: e.instance.props.channel.id
 					}));
-				}
-			}
-			
-			processTextInput (e) {
-				if (!this.settings.places.quickmessage || !e.instance.props.className || e.instance.props.className.indexOf(BDFDB.disCN.userpopoutmessageinputcontainer) == -1) return;
-				let channelId = BDFDB.LibraryStores.SelectedChannelStore.getChannelId();
-				if (!e.returnvalue) {
-					let input = e.instance.props.inputRef.current;
-					if (input) BDFDB.ListenerUtils.add(this, input, "keyup", event => {
-						if (this.settings.places.quickmessage && (!this.settings.general.addQuickToggle || channelBlacklist.indexOf(channelId) == -1)) {
-							let string = input.value;
-							let newString = this.parse(string);
-							if (string != newString) input.value = newString;
-						}
-					});
-				}
-				else {
-					if (this.settings.general.addQuickToggle) e.returnvalue = BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
-						children: [
-							BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex.Child, {
-								children: e.returnvalue
-							}),
-							BDFDB.ReactUtils.createElement(QuickToogleButtonComponent, {
-								type: "quickmessage",
-								channelId: channelId
-							})
-						]
-					});
 				}
 			}
 			

@@ -2,7 +2,7 @@
  * @name GameActivityToggle
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.2.4
+ * @version 1.2.9
  * @description Adds a Quick-Toggle Game Activity Button
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -62,7 +62,7 @@ module.exports = (_ => {
 		}
 	} : (([Plugin, BDFDB]) => {
 		var _this;
-		var toggleButton;
+		var toggleButton, toggleItem;
 		
 		const ActivityToggleComponent = class ActivityToggle extends BdApi.React.Component {
 			componentDidMount() {
@@ -76,7 +76,7 @@ module.exports = (_ => {
 					icon: iconProps => BDFDB.ReactUtils.createElement("div", {
 						className: BDFDB.disCN.lottieicon,
 						style: {
-							"--__lottieIconColor": enabled ? "currentColor" : BDFDB.DiscordConstants.ColorsCSS.STATUS_DANGER,
+							"--__lottieIconColor": enabled ? "var(--channel-icon)" : BDFDB.DiscordConstants.ColorsCSS.STATUS_DANGER,
 							"display": "flex",
 							"width": "20px",
 							"height": "20px"
@@ -89,8 +89,48 @@ module.exports = (_ => {
 							name: enabled ? BDFDB.LibraryComponents.SvgIcon.Names.GAMEPAD : BDFDB.LibraryComponents.SvgIcon.Names.GAMEPAD_DISABLED
 						}))
 					}),
-					onClick: _ => _this.toggle()
+					onClick: _ => {
+						_this.toggle();
+						if (toggleItem) BDFDB.ReactUtils.forceUpdate(toggleItem);
+					}
 				}));
+			}
+		};
+		
+		const ActivityToggleItemComponent = class ActivityToggleItem extends BdApi.React.Component {
+			componentDidMount() {
+				toggleItem = this;
+			}
+			componentWillUnmount() {
+				toggleItem = null;
+			}
+			render() {
+				const enabled = this.props.forceState != undefined ? this.props.forceState : BDFDB.DiscordUtils.getSetting("status", "showCurrentGame");
+				delete this.props.forceState;
+				return BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.UserPopoutItem, {
+					label: BDFDB.LanguageUtils.LanguageStrings.ACTIVITY_STATUS,
+					id: BDFDB.ContextMenuUtils.createItemId(_this.name, "activity-toggle"),
+					icon: _ => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SvgIcon, {
+						name: BDFDB.LibraryComponents.SvgIcon.Names.GAMEPAD,
+						width: 16,
+						height: 16
+					}),
+					onClick: _ => {
+						_this.toggle();
+						if (toggleButton) BDFDB.ReactUtils.forceUpdate(toggleButton);
+					},
+					hint: enabled ? BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SvgIcon, {
+						className: BDFDB.disCN.menucolordefault,
+						background: BDFDB.disCN.menucheckbox,
+						foreground: BDFDB.disCN.menucheck,
+						name: BDFDB.LibraryComponents.SvgIcon.Names.CHECKBOX,
+						style: {background: "unset"}
+					}) : BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SvgIcon, {
+						className: BDFDB.disCN.menucolordefault,
+						name: BDFDB.LibraryComponents.SvgIcon.Names.CHECKBOX_EMPTY,
+						style: {background: "unset"}
+					})
+				});
 			}
 		};
 		
@@ -114,16 +154,14 @@ module.exports = (_ => {
 				};
 				
 				this.modulePatches = {
-					before: [
-						"Menu"
-					],
 					after: [
-						"Account"
+						"Account",
+						"AccountPopout"
 					]
 				};
 				
 				this.css = `
-					${BDFDB.dotCNS._gameactivitytoggleadded + BDFDB.dotCNC.accountinfowithtagasbutton + BDFDB.dotCNS._gameactivitytoggleadded + BDFDB.dotCN.accountinfowithtagless} {
+					${BDFDB.dotCNS._gameactivitytoggleadded + BDFDB.dotCN.accountinfoavatarwrapper} {
 						flex: 1;
 						min-width: 0;
 					}
@@ -150,6 +188,8 @@ module.exports = (_ => {
 					if (newSettings.showCurrentGame != undefined) {
 						if (toggleButton) toggleButton.props.forceState = newSettings.showCurrentGame.value;
 						BDFDB.ReactUtils.forceUpdate(toggleButton);
+						if (toggleItem) toggleItem.props.forceState = newSettings.showCurrentGame.value;
+						BDFDB.ReactUtils.forceUpdate(toggleItem);
 						BDFDB.DataUtils.save({date: new Date(), value: newSettings.showCurrentGame.value}, this, "cachedState");
 					}
 				}});
@@ -222,24 +262,20 @@ module.exports = (_ => {
 				});
 			}
 			
-			processMenu (e) {
-				if (!this.settings.general.showItem || e.instance.props.navId != "account") return;
-				let [_, oldIndex] = BDFDB.ContextMenuUtils.findItem(e.instance, {id: BDFDB.ContextMenuUtils.createItemId(this.name, "activity-toggle")});
-				if (oldIndex > -1) return;
-				let [children, index] = BDFDB.ContextMenuUtils.findItem(e.instance, {id: ["custom-status", "set-custom-status", "edit-custom-status"]});
-				if (index > -1) {
-					let isChecked = BDFDB.DiscordUtils.getSetting("status", "showCurrentGame");
-					children.push(BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuCheckboxItem, {
-						label: BDFDB.LanguageUtils.LanguageStrings.ACTIVITY_STATUS,
-						id: BDFDB.ContextMenuUtils.createItemId(this.name, "activity-toggle"),
-						icon: _ => BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.MenuItems.MenuIcon, {
-							icon: BDFDB.LibraryComponents.SvgIcon.Names.GAMEPAD
-						}),
-						showIconFirst: true,
-						checked: isChecked,
-						action: _ => this.toggle()
-					}));
-				}
+			processAccountPopout (e) {
+				if (!this.settings.general.showItem) return;
+				let userpopoutMenus = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.userpopoutmenus]]});
+				if (!userpopoutMenus) return;
+				let [children, index] = BDFDB.ReactUtils.findParent(userpopoutMenus, {props: [["id", "set-status"]]});
+				if (index == -1) return;
+				children.splice(index, 0, BDFDB.ReactUtils.createElement(BDFDB.LibraryModules.React.Fragment, {
+					children: [
+						BDFDB.ReactUtils.createElement(ActivityToggleItemComponent, {}),
+						BDFDB.ReactUtils.createElement("div", {
+							className: BDFDB.disCN.userpopoutmenudivider
+						})
+					]
+				}));
 			}
 			
 			processAccount (e) {

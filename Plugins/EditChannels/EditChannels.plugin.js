@@ -2,7 +2,7 @@
  * @name EditChannels
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 4.5.8
+ * @version 4.6.0
  * @description Allows you to locally edit Channels
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -80,8 +80,6 @@ module.exports = (_ => {
 						recentMentions:		{value: true, 			description: "Recent Mentions Popout"},
 						threads:		{value: true, 			description: "Thread Overview"},
 						autocompletes:		{value: true, 			description: "Autocomplete Menu"},
-						auditLog:		{value: true, 			description: "Audit Log"},
-						inviteLog:		{value: true, 			description: "Invite Log"},
 						quickSwitcher:		{value: true, 			description: "Quick Switcher"},
 						searchResults:		{value: true, 			description: "Search Results"},
 						searchPopout:		{value: true, 			description: "Search Popout"},
@@ -91,14 +89,12 @@ module.exports = (_ => {
 			
 				this.modulePatches = {
 					before: [
-						"AuditLogEntry",
 						"AutocompleteChannelResult",
 						"ChannelCallHeader",
 						"ChannelEmptyMessages",
 						"ChannelsList",
 						"ChannelTextAreaEditor",
 						"ChannelThreadItem",
-						"GuildInvites",
 						"MessageContent",
 						"QuickSwitchChannelResult",
 						"RecentsChannelHeader",
@@ -107,7 +103,6 @@ module.exports = (_ => {
 						"ThreadMessageAccessories"
 					],
 					after: [
-						"AuditLogEntry",
 						"AutocompleteChannelResult",
 						"ChannelCallHeader",
 						"ChannelFloatingSidebar",
@@ -271,7 +266,7 @@ module.exports = (_ => {
 			}
 			
 			processChannelTextAreaEditor (e) {
-				if (!this.settings.places.chatTextarea || e.instance.props.disabled || !e.instance.props.channel || !changedChannels[e.instance.props.channel.id] || e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL_WITH_ACTIVITY && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) return;
+				if (!this.settings.places.chatTextarea || e.instance.props.disabled || !e.instance.props.channel || !changedChannels[e.instance.props.channel.id] || e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL && e.instance.props.type != BDFDB.DiscordConstants.ChannelTextAreaTypes.SIDEBAR) return;
 				if (changedChannels[e.instance.props.channel.id].name) e.instance.props.placeholder = BDFDB.LanguageUtils.LanguageStringsFormat("TEXTAREA_PLACEHOLDER", `#${changedChannels[e.instance.props.channel.id].name}`);
 			}
 			
@@ -334,23 +329,6 @@ module.exports = (_ => {
 						return children;
 					}, "Error in Children Render of AutocompleteChannelResult!", this);
 				}
-			}
-
-			processAuditLogEntry (e) {
-				if (!this.settings.places.auditLog) return;
-				let channel = BDFDB.ObjectUtils.get(e.instance, "props.log.options.channel");
-				if (!channel) return;
-				if (!e.returnvalue) e.instance.props.log.options.channel = this.getChannelData(channel.id);
-				else {
-					let channelName = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["children", [["#" + channel.name]]]]});
-					if (channelName) this.changeChannelColor(channelName, channel.id);
-				}
-			}
-
-			processGuildInvites (e) {
-				if (!this.settings.places.inviteLog || !e.instance.props.invites) return;
-				e.instance.props.invites = Object.assign({}, e.instance.props.invites);
-				for (let id in e.instance.props.invites) e.instance.props.invites[id] = new BDFDB.DiscordObjects.Invite(Object.assign({}, e.instance.props.invites[id], {channel: this.getChannelData(e.instance.props.invites[id].channel.id)}));
 			}
 			
 			processChannelFloatingSidebar (e) {
@@ -523,7 +501,7 @@ module.exports = (_ => {
 			
 			processChannelsList (e) {
 				if (!this.settings.places.channelList || !e.instance.props.guildChannels) return;
-				e.instance.props.guildChannels = new e.instance.props.guildChannels.constructor(e.instance.props.guild.id, e.instance.props.guildChannels.communitySection && e.instance.props.guildChannels.communitySection.communityRows || []);
+				e.instance.props.guildChannels = new e.instance.props.guildChannels.constructor(e.instance.props.guild.id, e.instance.props.guildChannels.guildActionSection && e.instance.props.guildChannels.guildActionSection.guildActionRows || [], e.instance.props.guildChannels.channelNoticeSection && e.instance.props.guildChannels.channelNoticeSection.rows || []);
 				for (let id in e.instance.props.guildChannels.categories) e.instance.props.guildChannels.categories[id].record = this.getChannelData(id, true, e.instance.props.guildChannels.categories[id].record);
 				let getChannelFromSectionRow = e.instance.props.guildChannels.getChannelFromSectionRow.bind(e.instance.props.guildChannels);
 				e.instance.props.guildChannels.getChannelFromSectionRow = BDFDB.TimeUtils.suppress((...args) => {
@@ -836,7 +814,7 @@ module.exports = (_ => {
 					header: this.labels.modal_header,
 					subHeader: channel.name,
 					children: [
-						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 							title: this.labels.modal_channelname,
 							className: BDFDB.disCN.marginbottom20,
 							children: [
@@ -846,12 +824,12 @@ module.exports = (_ => {
 									autoFocus: true,
 									onChange: value => {newData.name = value;}
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 									className: BDFDB.disCN.dividerdefault
 								})
 							]
 						}),
-						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 							title: this.labels.modal_colorpicker1,
 							className: BDFDB.disCN.marginbottom20,
 							children: [
@@ -865,7 +843,7 @@ module.exports = (_ => {
 							type: "Switch",
 							margin: 20,
 							label: this.labels.modal_inheritcolor,
-							tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+							tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 							value: channel.isCategory() && data.inheritColor,
 							disabled: !channel.isCategory(),
 							onChange: value => {newData.inheritColor = value;}
@@ -873,7 +851,7 @@ module.exports = (_ => {
 						channel.isGroupDM() && BDFDB.ReactUtils.createElement("div", {
 							className: BDFDB.disCN.marginbottom20,
 							children: [
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormDivider, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormDivider, {
 									className: BDFDB.disCNS.dividerdefault + BDFDB.disCN.marginbottom20
 								}),
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
@@ -881,9 +859,9 @@ module.exports = (_ => {
 									align: BDFDB.LibraryComponents.Flex.Align.CENTER,
 									direction: BDFDB.LibraryComponents.Flex.Direction.HORIZONTAL,
 									children: [
-										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormTitle, {
+										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormTitle.Title, {
 											className: BDFDB.disCN.marginreset,
-											tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+											tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 											children: this.labels.modal_channelicon
 										}),
 										BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsItem, {
@@ -891,7 +869,7 @@ module.exports = (_ => {
 											margin: 0,
 											grow: 0,
 											label: BDFDB.LanguageUtils.LanguageStrings.REMOVE,
-											tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+											tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 											value: data.removeIcon,
 											onChange: value => {
 												newData.removeIcon = value;

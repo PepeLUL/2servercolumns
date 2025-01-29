@@ -2,7 +2,7 @@
  * @name EditUsers
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 4.8.9
+ * @version 4.9.5
  * @description Allows you to locally edit Users
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -90,7 +90,6 @@ module.exports = (_ => {
 						userPopout:			{value: true, 		description: "User Popouts"},
 						userProfile:			{value: true, 		description: "User Profile Modal"},
 						autocompletes:			{value: true, 		description: "Autocomplete Menu"},
-						guildSettings:			{value: true, 		description: "Server Settings"},
 						quickSwitcher:			{value: true, 		description: "Quick Switcher"},
 						searchPopout:			{value: true, 		description: "Search Popout"},
 						userAccount:			{value: true, 		description: "Your Account Information"},
@@ -101,7 +100,6 @@ module.exports = (_ => {
 				this.modulePatches = {
 					before: [
 						"Account",
-						"AuditLogEntry",
 						"AutocompleteUserResult",
 						"ChannelCall",
 						"ChannelCallGrid",
@@ -109,11 +107,7 @@ module.exports = (_ => {
 						"ChannelReply",
 						"ChannelTextAreaEditor",
 						"DirectMessageAddPopout",
-						"GuildBans",
-						"GuildEmojis",
 						"GuildInvitationRow",
-						"GuildInvites",
-						"GuildMemberEntry",
 						"MemberListItem",
 						"Message",
 						"MessageContent",
@@ -129,19 +123,16 @@ module.exports = (_ => {
 						"SearchPopoutOption",
 						"ThreadMessageAccessoryMessage",
 						"UserBanner",
-						"UserBannerMask",
+						"UserHeaderAvatar",
+						"UserHeaderUsername",
 						"UserInfo",
-						"UsernameSection",
-						"UserPopoutAvatar",
-						"UserProfile",
+						"UserPanelHeader",
 						"UserProfileHeader",
-						"UserProfileUsername",
 						"UserSummaryItem",
 						"VoiceUser"
 					],
 					after: [
 						"Account",
-						"AuditLogs",
 						"AutocompleteUserResult",
 						"ChannelCallHeader",
 						"ChannelReply",
@@ -167,9 +158,8 @@ module.exports = (_ => {
 						"ThreadEmptyMessageAuthor",
 						"TypingUsers",
 						"UserMention",
-						"UsernameSection",
-						"UserProfileMutualFriends",
-						"UserProfileUsername",
+						"UserBanner",
+						"UserHeaderUsername",
 						"VoiceUser"
 					]
 				};
@@ -180,10 +170,6 @@ module.exports = (_ => {
 					${BDFDB.dotCN.messageavatar} {
 						background-size: cover;
 						object-fit: cover;
-					}
-					${BDFDB.dotCNS.userprofilemodal + BDFDB.dotCNS.linedefaultcolor + BDFDB.dotCN.bottag} {
-						display: inline-flex;
-						margin-top: 4px;
 					}
 					${BDFDB.dotCNS.dmchannel + BDFDB.dotCN.bottag} {
 						margin-left: 4px;
@@ -196,6 +182,12 @@ module.exports = (_ => {
 					}
 					${BDFDB.dotCNS.peoplesuserhovered + BDFDB.dotCN.peoplesdiscriminator} {
 						display: block;
+					}
+					${BDFDB.dotCNS.userheaderclickableusername + BDFDB.dotCN.userheadernickname}:has(span) {
+						text-decoration: unset !important;
+					}
+					${BDFDB.dotCNS.userheaderclickableusername + BDFDB.dotCN.userheadernickname} > span:first-child:hover {
+						text-decoration: underline !important;
 					}
 					${BDFDB.dotCN.message} span[style*="--edited-user-color-gradient"] ${BDFDB.dotCN.messageusername} {
 						background-image: var(--edited-user-color-gradient) !important;
@@ -294,6 +286,14 @@ module.exports = (_ => {
 						else if (data.banner) return data.banner;
 					}
 					return e.callOriginalMethod();
+				}});
+				
+				BDFDB.PatchUtils.patch(this, BDFDB.LibraryModules.UserBannerUtils, "getBanner", {after: e => {
+					let data = e.returnValue && e.methodArguments[0].displayProfile && changedUsers[e.methodArguments[0].displayProfile.userId];
+					if (data) {
+						if (data.removeBanner) e.returnValue.bannerSrc = null;
+						else if (data.banner) e.returnValue.bannerSrc = data.banner;
+					}
 				}});
 				
 				BDFDB.PatchUtils.patch(this, BDFDB.LibraryModules.MemberDisplayUtils, "getUserProfile", {after: e => {
@@ -465,7 +465,7 @@ module.exports = (_ => {
 			}
 			
 			processChannelTextAreaEditor (e) {
-				if (!e.instance.props.disabled && e.instance.props.channel && e.instance.props.channel.isDM() && (e.instance.props.type == BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL || e.instance.props.type == BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL_WITH_ACTIVITY) && this.settings.places.chatTextarea) {
+				if (!e.instance.props.disabled && e.instance.props.channel && e.instance.props.channel.isDM() && (e.instance.props.type == BDFDB.DiscordConstants.ChannelTextAreaTypes.NORMAL) && this.settings.places.chatTextarea) {
 					let user = BDFDB.LibraryStores.UserStore.getUser(e.instance.props.channel.recipients[0]);
 					if (user) e.instance.props.placeholder = BDFDB.LanguageUtils.LanguageStringsFormat("TEXTAREA_PLACEHOLDER", `@${changedUsers[user.id] && changedUsers[user.id].name || user.globalName || user.username}`);
 				}
@@ -524,12 +524,7 @@ module.exports = (_ => {
 				let change = false, guildId = null;
 				let tagClass = "";
 				if (e.instance.props.className) {
-					if (e.instance.props.className.indexOf(BDFDB.disCN.userpopoutheadertagwithnickname) > -1) {
-						change = this.settings.places.userPopout;
-						guildId = BDFDB.LibraryStores.SelectedGuildStore.getGuildId();
-						tagClass = BDFDB.disCNS.userpopoutheaderbottag + BDFDB.disCN.bottagnametag;
-					}
-					else if (e.instance.props.className.indexOf(BDFDB.disCN.guildsettingsinviteusername) > -1) {
+					if (e.instance.props.className.indexOf(BDFDB.disCN.guildsettingsinviteusername) > -1) {
 						change = this.settings.places.guildSettings;
 					}
 					else if (e.instance.props.className.indexOf(BDFDB.disCN.peoplesdiscordtag) > -1) {
@@ -549,36 +544,30 @@ module.exports = (_ => {
 
 			processUserBanner (e) {
 				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id]) return;
-				if (changedUsers[e.instance.props.user.id].removeBanner) {
-					e.instance.props.bannerSrc = null;
-					if (e.instance.props.displayProfile) e.instance.props.displayProfile.banner = null;
-				}
-				else if (changedUsers[e.instance.props.user.id].banner) {
-					e.instance.props.bannerSrc = changedUsers[e.instance.props.user.id].banner;
-					if (e.instance.props.displayProfile) {
-						e.instance.props.displayProfile = BDFDB.ObjectUtils.copy(e.instance.props.displayProfile);
-						e.instance.props.displayProfile.banner = changedUsers[e.instance.props.user.id].banner;
-						e.instance.props.displayProfile.premiumType = 2;
-					}
-				}
-			}
-
-			processUserBannerMask (e) {
-				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id]) return;
-				if (changedUsers[e.instance.props.user.id].removeBanner) e.instance.props.isPremium = false;
-				else if (changedUsers[e.instance.props.user.id].banner) e.instance.props.isPremium = true;
-			}
-			
-			processUserPopoutAvatar (e) {
-				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id]) return;
-				if (this.settings.places.userPopout) e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
-				if (e.instance.props.displayProfile) {
+				if (!e.returnvalue) {
 					if (changedUsers[e.instance.props.user.id].removeBanner) {
-						e.instance.props.hasBanner = false;
 						e.instance.props.displayProfile.banner = null;
 					}
 					else if (changedUsers[e.instance.props.user.id].banner) {
-						e.instance.props.hasBanner = true;
+						e.instance.props.displayProfile = BDFDB.ObjectUtils.copy(e.instance.props.displayProfile);
+						e.instance.props.displayProfile.banner = changedUsers[e.instance.props.user.id].banner;
+						e.instance.props.displayProfile.premiumType = 2;
+					}
+				}
+				else {
+					if (changedUsers[e.instance.props.user.id].removeBanner) e.returnvalue.props.isPremium = false;
+					else if (changedUsers[e.instance.props.user.id].banner) e.returnvalue.props.isPremium = true;
+					if (e.instance.props.displayProfile.themeColors) e.returnvalue.props.hasThemeColors = true;
+					else e.returnvalue.props.hasThemeColors = false;
+				}
+			}
+			
+			processUserHeaderAvatar (e) {
+				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id]) return;
+				if (this.settings.places.userPopout) e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
+				if (e.instance.props.displayProfile) {
+					if (changedUsers[e.instance.props.user.id].removeBanner) e.instance.props.displayProfile.banner = null;
+					else if (changedUsers[e.instance.props.user.id].banner) {
 						e.instance.props.displayProfile = BDFDB.ObjectUtils.copy(e.instance.props.displayProfile);
 						e.instance.props.displayProfile.banner = changedUsers[e.instance.props.user.id].banner;
 						e.instance.props.displayProfile.premiumType = 2;
@@ -586,8 +575,18 @@ module.exports = (_ => {
 				}
 			}
 			
-			processUsernameSection (e) {
-				if (!this.settings.places.userPopout || !e.instance.props.user) return;
+			processUserPanelHeader (e) {
+				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id] || !this.settings.places.userProfile) return;
+				e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
+			}
+			
+			processUserProfileHeader (e) {
+				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id] || !this.settings.places.userProfile) return;
+				e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
+			}
+			
+			processUserHeaderUsername (e) {
+				if (!e.instance.props.user || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.BITE_SIZE && !this.settings.places.userPopout || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.FULL_SIZE && !this.settings.places.userProfile) return;
 				let data = changedUsers[e.instance.props.user.id];
 				if (!data) return;
 				if (!e.returnvalue) {
@@ -596,45 +595,17 @@ module.exports = (_ => {
 				}
 				else {
 					if (data.color1 || data.tag) {
-						let [children, index] = BDFDB.ReactUtils.findParent(e.returnvalue, {props: [["className", BDFDB.disCN.userpopoutheadernickname]]});
+						let [children, index] = BDFDB.ReactUtils.findParent(e.returnvalue, {props: [["className", BDFDB.disCN.userheadernickname]]});
 						if (index > -1) {
 							this.changeUserColor(children[index], e.instance.props.user.id);
 							if (!BDFDB.ArrayUtils.is(children[index].props.children)) children[index].props.children = [children[index].props.children].flat(10);
 							this.injectBadge(children[index].props.children, e.instance.props.user.id, BDFDB.LibraryStores.SelectedGuildStore.getGuildId(), 2, {
-								tagClass: BDFDB.disCNS.userpopoutheaderbottag + BDFDB.disCN.bottagnametag,
+								tagClass: BDFDB.disCNS.userheaderbottag + BDFDB.disCN.bottagnametag,
 								inverted: typeof e.instance.getMode == "function" && e.instance.getMode() !== "Normal"
 							});
 						}
 					}
 				}
-			}
-
-			processUserProfile (e) {
-				if (e.instance.props.user && this.settings.places.userProfile) e.instance.props.user = this.getUserData(e.instance.props.user.id);
-			}
-
-			processUserProfileHeader (e) {
-				if (e.instance.props.user && this.settings.places.userProfile) e.instance.props.user = this.getUserData(e.instance.props.user.id);
-			}
-
-			processUserProfileUsername (e) {
-				if (!e.instance.props.user || !this.settings.places.userProfile) return;
-				if (!e.returnvalue) e.instance.props.user = this.getUserData(e.instance.props.user.id);
-				else {
-					let username = BDFDB.ReactUtils.findChild(e.returnvalue, {props: ["children", "style", "variant"]});
-					if (!username) return;
-					username.props.children = BDFDB.ReactUtils.createElement(BDFDB.ReactUtils.Fragment, {children: username.props.children});
-					this.changeUserColor(username.props.children, e.instance.props.user.id);
-					username.props.children = [username.props.children];
-					this.injectBadge(username.props.children, e.instance.props.user.id, BDFDB.LibraryStores.SelectedGuildStore.getGuildId(), 2, {
-						tagClass: BDFDB.disCN.bottagnametag
-					});
-				}
-			}
-
-			processUserProfileMutualFriends (e) {
-				if (!this.settings.places.userProfile || !e.returnvalue.props.children || !e.returnvalue.props.children.length) return;
-				for (let row of e.returnvalue.props.children) if (row && row.props && row.props.user) row.props.user = this.getUserData(row.props.user.id);
 			}
 
 			processUserInfo (e) {
@@ -735,13 +706,13 @@ module.exports = (_ => {
 						const renderChildren = accountButton.props.children;
 						accountButton.props.children = BDFDB.TimeUtils.suppress((...args) => {
 							const returnValue = renderChildren(...args);
-							const renderChildren2 = returnValue.props.children.props.children;
-							returnValue.props.children.props.children = BDFDB.TimeUtils.suppress((...args2) => {
-								const returnValue2 = renderChildren2(...args2);
-								let username = BDFDB.ReactUtils.findChild(returnValue2, {props: [["className", BDFDB.disCN.accountinfodetails]]});
+							const renderNameTag = returnValue.props.renderNameTag;
+							returnValue.props.renderNameTag = BDFDB.TimeUtils.suppress((...args2) => {
+								const nameTag = renderNameTag(...args2);
+								let username = BDFDB.ReactUtils.findChild(nameTag, {props: [["className", BDFDB.disCN.accountinfodetails]]});
 								if (username) this.changeUserColor(username.props.children, e.instance.props.currentUser.id);
-								return returnValue2;
-							}, "Error in Children Render of Account Button Children!", this);
+								return nameTag;
+							}, "Error in Render NameTag in Account Button!", this);
 							return returnValue;
 						}, "Error in Children Render of Account Button!", this);
 					}
@@ -1054,54 +1025,6 @@ module.exports = (_ => {
 				});
 			}
 
-			processAuditLogs (e) {
-				if (!this.settings.places.guildSettings || !e.instance.props.logs) return;
-				if (!BDFDB.PatchUtils.isPatched(this, e.instance, "renderUserQuickSelectItem")) BDFDB.PatchUtils.patch(this, e.instance, "renderUserQuickSelectItem", {after: e2 => {
-					if (!e2.methodArguments[0] || !e2.methodArguments[0].user || !changedUsers[e2.methodArguments[0].user.id]) return;
-					let username = BDFDB.ReactUtils.findChild(e2.returnValue, {props: [["children", e2.methodArguments[0].label]]});
-					if (username) {
-						if (changedUsers[e2.methodArguments[0].user.id].name) username.props.children = changedUsers[e2.methodArguments[0].user.id].name;
-						this.changeUserColor(username, e2.methodArguments[0].user.id);
-					}
-					let avatar = BDFDB.ReactUtils.findChild(e2.returnValue, {props: [["className", BDFDB.disCN.selectfilterpopoutavatar]]});
-					if (avatar) avatar.props.src = this.getUserAvatar(e2.methodArguments[0].user.id);
-				}}, {noCache: true});
-			}
-
-			processAuditLogEntry (e) {
-				if (!this.settings.places.guildSettings || !e.instance.props.log) return;
-				if (e.instance.props.log.user) e.instance.props.log.user = this.getUserData(e.instance.props.log.user.id);
-				if (e.instance.props.log.target && e.instance.props.log.targetType == "USER") e.instance.props.log.target = this.getUserData(e.instance.props.log.target.id);
-			}
-
-			processGuildEmojis (e) {
-				if (!this.settings.places.guildSettings) return;
-				if (e.instance.props.staticEmojis) {
-					e.instance.props.staticEmojis = [].concat(e.instance.props.staticEmojis);
-					for (let i in e.instance.props.staticEmojis) e.instance.props.staticEmojis[i] = Object.assign({}, e.instance.props.staticEmojis[i], {user: this.getUserData(e.instance.props.staticEmojis[i].user.id)});
-				}
-				if (e.instance.props.animatedEmojis) {
-					e.instance.props.animatedEmojis = [].concat(e.instance.props.animatedEmojis);
-					for (let i in e.instance.props.animatedEmojis) e.instance.props.animatedEmojis[i] = Object.assign({}, e.instance.props.animatedEmojis[i], {user: this.getUserData(e.instance.props.animatedEmojis[i].user.id)});
-				}
-			}
-
-			processGuildMemberEntry (e) {
-				if (this.settings.places.guildSettings && e.instance.props.user) e.instance.props.user = this.getUserData(e.instance.props.user.id);
-			}
-
-			processGuildInvites (e) {
-				if (!this.settings.places.guildSettings || !e.instance.props.invites) return;
-				e.instance.props.invites = Object.assign({}, e.instance.props.invites);
-				for (let id in e.instance.props.invites) e.instance.props.invites[id] = new BDFDB.DiscordObjects.Invite(Object.assign({}, e.instance.props.invites[id], {inviter: this.getUserData(e.instance.props.invites[id].inviter.id)}));
-			}
-
-			processGuildBans (e) {
-				if (!this.settings.places.guildSettings || !e.instance.props.bans) return;
-				e.instance.props.bans = Object.assign({}, e.instance.props.bans);
-				for (let id in e.instance.props.bans) e.instance.props.bans[id] = Object.assign({}, e.instance.props.bans[id], {user: this.getUserData(e.instance.props.bans[id].user.id)});
-			}
-
 			processGuildInvitationRow (e) {
 				if (!this.settings.places.inviteList || !e.instance.props.user) return;
 				if (!e.returnvalue) e.instance.props.user = this.getUserData(e.instance.props.user.id);
@@ -1365,18 +1288,12 @@ module.exports = (_ => {
 						newUserObject.username = !keepName && data.name || nativeObject.username;
 						newUserObject.usernameNormalized = !keepName && data.name && data.name.toLowerCase() || nativeObject.usernameNormalized;
 					}
-					if (data.removeIcon) {
-						newUserObject.avatar = null;
-						newUserObject.avatarURL = null;
-						newUserObject.getAvatarSource = _ => null;
-						newUserObject.getAvatarURL = _ => null;
-						newUserObject.guildMemberAvatars = {};
-					}
-					else if (data.url) {
-						newUserObject.avatar = data.url;
-						newUserObject.avatarURL = data.url;
-						newUserObject.getAvatarSource = _ => data.url;
-						newUserObject.getAvatarURL = _ => data.url;
+					let url = data.removeIcon ? "https://mwittrien.github.io/BetterDiscordAddons/Themes/_res/svgs/empty.png?src=.com/avatars/" + user.id + "/" + user.avatar : data.url;
+					if (url) {
+						newUserObject.avatar = url;
+						newUserObject.avatarURL = url;
+						newUserObject.getAvatarSource = _ => url;
+						newUserObject.getAvatarURL = _ => url;
 						newUserObject.guildMemberAvatars = {};
 					}
 					return newUserObject;
@@ -1461,9 +1378,9 @@ module.exports = (_ => {
 											className: BDFDB.disCN.marginbottom8,
 											align: BDFDB.LibraryComponents.Flex.Align.CENTER,
 											direction: BDFDB.LibraryComponents.Flex.Direction.HORIZONTAL,
-											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormTitle, {
+											children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormTitle.Title, {
 												className: BDFDB.disCN.marginreset,
-												tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+												tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 												children: this.labels.modal_username
 											})
 										}),
@@ -1486,7 +1403,7 @@ module.exports = (_ => {
 											margin: 0,
 											grow: 0,
 											label: this.labels.modal_showaccountname,
-											tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+											tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 											value: data.showAccountName,
 											onChange: value => newData.showAccountName = value
 										}),
@@ -1495,7 +1412,7 @@ module.exports = (_ => {
 											margin: 0,
 											grow: 0,
 											label: this.labels.modal_showservernick,
-											tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+											tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 											value: data.showServerNick,
 											onChange: value => newData.showServerNick = value
 										}),
@@ -1504,7 +1421,7 @@ module.exports = (_ => {
 											margin: 0,
 											grow: 0,
 											label: this.labels.modal_useservernick,
-											tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+											tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 											value: data.useServerNick,
 											onChange: value => newData.useServerNick = value
 										})
@@ -1518,9 +1435,9 @@ module.exports = (_ => {
 											align: BDFDB.LibraryComponents.Flex.Align.CENTER,
 											direction: BDFDB.LibraryComponents.Flex.Direction.HORIZONTAL,
 											children: [
-												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormTitle, {
+												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormTitle.Title, {
 													className: BDFDB.disCN.marginreset,
-													tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+													tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 													children: this.labels.modal_useravatar
 												}),
 												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsItem, {
@@ -1528,7 +1445,7 @@ module.exports = (_ => {
 													margin: 0,
 													grow: 0,
 													label: BDFDB.LanguageUtils.LanguageStrings.REMOVE,
-													tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+													tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 													value: data.removeIcon,
 													onChange: value => {
 														newData.removeIcon = value;
@@ -1565,9 +1482,9 @@ module.exports = (_ => {
 											align: BDFDB.LibraryComponents.Flex.Align.CENTER,
 											direction: BDFDB.LibraryComponents.Flex.Direction.HORIZONTAL,
 											children: [
-												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormTitle, {
+												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormTitle.Title, {
 													className: BDFDB.disCN.marginreset,
-													tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+													tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 													children: BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS
 												}),
 												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsItem, {
@@ -1575,7 +1492,7 @@ module.exports = (_ => {
 													margin: 0,
 													grow: 0,
 													label: BDFDB.LanguageUtils.LanguageStrings.REMOVE,
-													tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+													tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 													value: data.removeStatus,
 													onChange: value => {
 														newData.removeStatus = value;
@@ -1632,7 +1549,7 @@ module.exports = (_ => {
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ModalComponents.ModalTabContent, {
 							tab: this.labels.modal_tabheader2,
 							children: [
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 									title: this.labels.modal_colorpicker1,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ColorSwatches, {
@@ -1640,7 +1557,7 @@ module.exports = (_ => {
 										onColorChange: value => newData.color1 = value
 									})
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 									title: this.labels.modal_colorpicker2,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ColorSwatches, {
@@ -1652,7 +1569,7 @@ module.exports = (_ => {
 									type: "Switch",
 									margin: 20,
 									label: this.labels.modal_userolecolor,
-									tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+									tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 									value: data.useRoleColor,
 									onChange: value => newData.useRoleColor = value
 								})
@@ -1661,7 +1578,7 @@ module.exports = (_ => {
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ModalComponents.ModalTabContent, {
 							tab: this.labels.modal_tabheader3,
 							children: [
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 									title: this.labels.modal_usertag,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
@@ -1669,7 +1586,7 @@ module.exports = (_ => {
 										onChange: value => newData.tag = value
 									})
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 									title: this.labels.modal_colorpicker3,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ColorSwatches, {
@@ -1679,7 +1596,7 @@ module.exports = (_ => {
 										onColorChange: value => newData.color3 = value
 									})
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 									title: this.labels.modal_colorpicker4,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ColorSwatches, {
@@ -1693,7 +1610,7 @@ module.exports = (_ => {
 									type: "Switch",
 									margin: 20,
 									label: this.labels.modal_ignoretagcolor,
-									tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+									tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 									value: data.ignoreTagColor,
 									onChange: value => {
 										newData.ignoreTagColor = value;
@@ -1705,7 +1622,7 @@ module.exports = (_ => {
 							]
 						}),
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ModalComponents.ModalTabContent, {
-							tab: BDFDB.LibraryModules.LanguageStore.Messages.USER_SETTINGS_PROFILE_THEME,
+							tab: BDFDB.LanguageUtils.LanguageStrings.USER_SETTINGS_PROFILE_THEME,
 							children: [
 								BDFDB.ReactUtils.createElement("div", {
 									className: BDFDB.disCN.marginbottom20,
@@ -1715,9 +1632,9 @@ module.exports = (_ => {
 											align: BDFDB.LibraryComponents.Flex.Align.CENTER,
 											direction: BDFDB.LibraryComponents.Flex.Direction.HORIZONTAL,
 											children: [
-												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormTitle, {
+												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormTitle.Title, {
 													className: BDFDB.disCN.marginreset,
-													tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+													tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 													children: BDFDB.LanguageUtils.LanguageStrings.USER_SETTINGS_PROFILE_BANNER
 												}),
 												BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsItem, {
@@ -1725,7 +1642,7 @@ module.exports = (_ => {
 													margin: 0,
 													grow: 0,
 													label: BDFDB.LanguageUtils.LanguageStrings.REMOVE,
-													tag: BDFDB.LibraryComponents.FormComponents.FormTags.H5,
+													tag: BDFDB.LibraryComponents.FormTitle.Tags.H5,
 													value: data.removeBanner,
 													onChange: value => {
 														newData.removeBanner = value;
@@ -1753,8 +1670,8 @@ module.exports = (_ => {
 										})
 									]
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
-									title: BDFDB.LibraryModules.LanguageStore.Messages.USER_SETTINGS_BANNER_COLOR_TITLE,
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
+									title: BDFDB.LanguageUtils.LanguageStrings.USER_SETTINGS_BANNER_COLOR_TITLE,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ColorSwatches, {
 										color: data.color5,
@@ -1766,8 +1683,8 @@ module.exports = (_ => {
 										onColorChange: value => newData.color5 = value
 									})
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
-									title: BDFDB.LibraryModules.LanguageStore.Messages.USER_SETTINGS_PROFILE_THEME_PRIMARY,
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
+									title: BDFDB.LanguageUtils.LanguageStrings.USER_SETTINGS_PROFILE_THEME_PRIMARY,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ColorSwatches, {
 										color: data.color6,
@@ -1779,8 +1696,8 @@ module.exports = (_ => {
 										onColorChange: value => newData.color6 = value
 									})
 								}),
-								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormItem, {
-									title: BDFDB.LibraryModules.LanguageStore.Messages.USER_SETTINGS_PROFILE_THEME_ACCENT,
+								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
+									title: BDFDB.LanguageUtils.LanguageStrings.USER_SETTINGS_PROFILE_THEME_ACCENT,
 									className: BDFDB.disCN.marginbottom20,
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.ColorSwatches, {
 										color: data.color7,

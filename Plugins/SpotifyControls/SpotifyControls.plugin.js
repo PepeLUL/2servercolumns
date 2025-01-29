@@ -2,7 +2,7 @@
  * @name SpotifyControls
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.4.0
+ * @version 1.4.2
  * @description Adds a Control Panel while listening to Spotify on a connected Account
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -209,12 +209,12 @@ module.exports = (_ => {
 									text: socketDevice.device.is_restricted ? _this.labels.restricted_device : null,
 									tooltipConfig: {color: "red"},
 									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {
+										wrap: BDFDB.LibraryComponents.Flex.Wrap.NO_WRAP,
 										grow: 0,
 										children: [
 											BDFDB.ReactUtils.createElement(SpotifyControlsButtonComponent, {
 												type: "share",
 												player: this,
-												style: this.props.maximized ? {marginRight: 4} : {},
 												onClick: _ => {
 													let url = BDFDB.ObjectUtils.get(playbackState, "item.external_urls.spotify") || BDFDB.ObjectUtils.get(playbackState, "context.external_urls.spotify");
 													if (url) {
@@ -293,7 +293,6 @@ module.exports = (_ => {
 												player: this,
 												icon: Math.ceil(currentVolume/34),
 												disabled: socketDevice.device.is_restricted,
-												style: this.props.maximized ? {marginLeft: 4} : {},
 												onContextMenu: _ => {
 													if (currentVolume == 0) {
 														if (lastVolume) this.request(socketDevice.socket, socketDevice.device, "volume", {
@@ -745,9 +744,9 @@ module.exports = (_ => {
 						settingsItems.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.CollapseContainer, {
 							title: "Button Settings",
 							collapseStates: collapseStates,
-							children: [BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormComponents.FormTitle, {
+							children: [BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormTitle.Title, {
 								className: BDFDB.disCN.marginbottom4,
-								tag: BDFDB.LibraryComponents.FormComponents.FormTags.H3,
+								tag: BDFDB.LibraryComponents.FormTitle.Tags.H3,
 								children: "Add Control Buttons in small and/or big Player Version: "
 							})].concat(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SettingsList, {
 								settings: Object.keys(this.defaults.buttons[Object.keys(this.defaults.buttons)[0]].value),
