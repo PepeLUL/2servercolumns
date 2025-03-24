@@ -2,7 +2,7 @@
  * @name GameActivityToggle
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.2.9
+ * @version 1.3.5
  * @description Adds a Quick-Toggle Game Activity Button
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -30,9 +30,9 @@ module.exports = (_ => {
 				else return r.text();
 			}).then(b => {
 				if (!b) throw new Error();
-				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.showToast("Finished downloading BDFDB Library", {type: "success"}));
+				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", {type: "success"}));
 			}).catch(error => {
-				BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				BdApi.UI.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
 			});
 		}
 		
@@ -40,7 +40,7 @@ module.exports = (_ => {
 			if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, {pluginQueue: []});
 			if (!window.BDFDB_Global.downloadModal) {
 				window.BDFDB_Global.downloadModal = true;
-				BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
+				BdApi.UI.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
 					confirmText: "Download Now",
 					cancelText: "Cancel",
 					onCancel: _ => {delete window.BDFDB_Global.downloadModal;},
@@ -76,7 +76,7 @@ module.exports = (_ => {
 					icon: iconProps => BDFDB.ReactUtils.createElement("div", {
 						className: BDFDB.disCN.lottieicon,
 						style: {
-							"--__lottieIconColor": enabled ? "var(--channel-icon)" : BDFDB.DiscordConstants.ColorsCSS.STATUS_DANGER,
+							"--__lottieIconColor": enabled ? "currentColor" : BDFDB.DiscordConstants.ColorsCSS.STATUS_DANGER,
 							"display": "flex",
 							"width": "20px",
 							"height": "20px"
@@ -162,8 +162,12 @@ module.exports = (_ => {
 				
 				this.css = `
 					${BDFDB.dotCNS._gameactivitytoggleadded + BDFDB.dotCN.accountinfoavatarwrapper} {
-						flex: 1;
-						min-width: 0;
+						flex: 1 !important;
+						min-width: 0 !important;
+					}
+					${BDFDB.dotCNS._gameactivitytoggleadded + BDFDB.dotCN.accountinfobuttons} > * {
+						margin-left: 0;
+						margin-right: 0;
 					}
 				`;
 			}
@@ -280,12 +284,34 @@ module.exports = (_ => {
 			
 			processAccount (e) {
 				if (!this.settings.general.showButton) return;
-				let accountinfo = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.accountinfo]]});
-				let children = accountinfo && BDFDB.ObjectUtils.get(accountinfo, "props.children.1.props.children");
-				if (children && children.length && BDFDB.ArrayUtils.is(children)) {
-					accountinfo.props.className = BDFDB.DOMUtils.formatClassName(accountinfo.props.className, BDFDB.disCN._gameactivitytoggleadded);
-					children.unshift(BDFDB.ReactUtils.createElement(ActivityToggleComponent, {}));
+				let insertButton = returnvalue => {
+					let accountinfo = BDFDB.ReactUtils.findChild(returnvalue, {props: [["className", BDFDB.disCN.accountinfo]]});
+					if (!accountinfo) return;
+					let buttons = BDFDB.ReactUtils.findChild(returnvalue, {props: [["className", BDFDB.disCN.accountinfobuttons]]});
+					if (buttons) {
+						accountinfo.props.className = BDFDB.DOMUtils.formatClassName(accountinfo.props.className, BDFDB.disCN._gameactivitytoggleadded);
+						buttons.props.children.unshift(BDFDB.ReactUtils.createElement(ActivityToggleComponent, {}));
+					}
+					else {
+						let [children, index] = BDFDB.ReactUtils.findParent(returnvalue, {name: "AccountButtons"});
+						if (index > -1) {
+							accountinfo.props.className = BDFDB.DOMUtils.formatClassName(accountinfo.props.className, BDFDB.disCN._gameactivitytoggleadded);
+							children.splice(index, 0, BDFDB.ReactUtils.createElement("div", {
+								className: BDFDB.disCN.accountinfobuttons,
+								children: BDFDB.ReactUtils.createElement(ActivityToggleComponent, {})
+							}));
+						}
+					}
+				};
+				if (typeof e.returnvalue.props.children == "function") {
+					let childrenRender = e.returnvalue.props.children;
+					e.returnvalue.props.children = BDFDB.TimeUtils.suppress((...args) => {
+						let renderedChildren = childrenRender(...args);
+						insertButton(renderedChildren);
+						return renderedChildren;
+					}, "Error in Children Render in Account!", this);
 				}
+				else insertButton(children[index]);
 			}
 			
 			activateKeybind () {

@@ -2,7 +2,7 @@
  * @name OldTitleBar
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.8.3
+ * @version 1.8.5
  * @description Allows you to switch to Discord's old Titlebar
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -30,9 +30,9 @@ module.exports = (_ => {
 				else return r.text();
 			}).then(b => {
 				if (!b) throw new Error();
-				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.showToast("Finished downloading BDFDB Library", {type: "success"}));
+				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", {type: "success"}));
 			}).catch(error => {
-				BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				BdApi.UI.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
 			});
 		}
 		
@@ -40,7 +40,7 @@ module.exports = (_ => {
 			if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, {pluginQueue: []});
 			if (!window.BDFDB_Global.downloadModal) {
 				window.BDFDB_Global.downloadModal = true;
-				BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
+				BdApi.UI.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
 					confirmText: "Download Now",
 					cancelText: "Cancel",
 					onCancel: _ => {delete window.BDFDB_Global.downloadModal;},
@@ -63,6 +63,7 @@ module.exports = (_ => {
 	} : (([Plugin, BDFDB]) => {
 		var _this;
 		var patched, lastWindowRects;
+		var titleBarButton;
 		var toolbars = [];
 		
 		const OldTitleBarToolbarComponent = class OldTitleBarToolbar extends BdApi.React.Component {
@@ -74,7 +75,7 @@ module.exports = (_ => {
 			}
 			render() {
 				let children = [];
-				if (this.props.addFirstDivider) children.push(BDFDB.ReactUtils.createElement("div", {className: BDFDB.disCN.channelheaderdivider}))
+				if (this.props.addFirstDivider) children.push(BDFDB.ReactUtils.createElement("div", {className: BDFDB.disCN.channelheaderdivider}));
 				if (_this.settings.general.reloadButton) {
 					children.push(BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TooltipContainer, {
 						text: BDFDB.LanguageUtils.LanguageStrings.ERRORS_RELOAD,
@@ -134,7 +135,8 @@ module.exports = (_ => {
 			
 				this.modulePatches = {
 					before: [
-						"HeaderBar"
+						"HeaderBar",
+						"TitleBar"
 					],
 					after: [
 						"AuthWrapper",
@@ -143,7 +145,11 @@ module.exports = (_ => {
 				};
 				
 				this.css = `
+					${BDFDB.dotCN.app} {
+						--custom-app-top-bar-height: 0px;
+					}
 					${BDFDB.dotCNS._oldtitlebarenabled + BDFDB.dotCN.titlebar},
+					${BDFDB.dotCNS._oldtitlebarenabled + BDFDB.dotCN.titlebarthick},
 					${BDFDB.dotCNS._oldtitlebarenabled + BDFDB.dotCN.authboxcharacterbackground}:before,
 					${BDFDB.dotCNS._oldtitlebarenabled + BDFDB.dotCN.authboxsplashbackground}:before {
 						display: none !important;
@@ -166,6 +172,12 @@ module.exports = (_ => {
 						display: flex;
 						flex: 1 0 auto;
 						justify-content: flex-end;
+						align-items: center;
+					}
+					
+					${BDFDB.dotCN.titlebarthick} ~ * ${BDFDB.dotCNS._oldtitlebartoolbar + BDFDB.dotCN.channelheadericonwrapper} {
+						--chat-input-icon-size: 24px;
+						transform: scale(90%);
 					}
 					
 					${BDFDB.dotCNS.chatthreadsidebaropen} > *:first-child ${BDFDB.dotCN._oldtitlebartoolbar} {
@@ -249,6 +261,10 @@ module.exports = (_ => {
 				}
 			}
 			
+			processTitleBar (e) {
+				titleBarButton = e.instance.props.trailing;
+			}
+			
 			processHeaderBar (e) {
 				let wrapper = BDFDB.ReactUtils.findChild(e.instance, {props: ["toolbar", "children"]});
 				if (!wrapper) return;
@@ -260,6 +276,7 @@ module.exports = (_ => {
 						BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Flex, {children})
 					];
 				}
+				if (document.querySelector(BDFDB.dotCN.titlebarthick)) children.push(titleBarButton);
 				this.injectButtons(children, true);
 			}
 

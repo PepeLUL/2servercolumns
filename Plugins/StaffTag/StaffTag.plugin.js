@@ -2,7 +2,7 @@
  * @name StaffTag
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.6.2
+ * @version 1.6.4
  * @description Adds a Crown/Tag to Server Owners (or Admins/Management)
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -30,9 +30,9 @@ module.exports = (_ => {
 				else return r.text();
 			}).then(b => {
 				if (!b) throw new Error();
-				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.showToast("Finished downloading BDFDB Library", {type: "success"}));
+				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", {type: "success"}));
 			}).catch(error => {
-				BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				BdApi.UI.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
 			});
 		}
 		
@@ -40,7 +40,7 @@ module.exports = (_ => {
 			if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, {pluginQueue: []});
 			if (!window.BDFDB_Global.downloadModal) {
 				window.BDFDB_Global.downloadModal = true;
-				BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
+				BdApi.UI.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
 					confirmText: "Download Now",
 					cancelText: "Cancel",
 					onCancel: _ => {delete window.BDFDB_Global.downloadModal;},
@@ -265,10 +265,11 @@ module.exports = (_ => {
 			}
 
 			processNameContainer (e) {
-				if (!e.instance.props.user) return;
-				let userType = this.getUserType(e.instance.props.user, e.instance.props.channel && e.instance.props.channel.id);
+				let user = BDFDB.LibraryStores.UserStore.getUser(BDFDB.ReactUtils.findValue(e.instance.props.name, "userId"));
+				if (!user) return;
+				let userType = this.getUserType(user, e.instance.props.channel && e.instance.props.channel.id);
 				if (userType && this.settings.tagPlaces.memberList) {
-					this.injectStaffTag(BDFDB.ObjectUtils.get(e.instance, "props.decorators.props.children"), e.instance.props.user, userType, 1, {
+					this.injectStaffTag(BDFDB.ObjectUtils.get(e.instance, "props.decorators.props.children"), user, userType, 1, {
 						channelId: e.instance.props.channel && e.instance.props.channel.id,
 						tagClass: BDFDB.disCN.bottagmember
 					});

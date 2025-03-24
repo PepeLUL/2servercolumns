@@ -2,7 +2,7 @@
  * @name TimedLightDarkMode
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.1.9
+ * @version 1.2.1
  * @description Adds a Time Slider to the Appearance Settings
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -30,9 +30,9 @@ module.exports = (_ => {
 				else return r.text();
 			}).then(b => {
 				if (!b) throw new Error();
-				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.showToast("Finished downloading BDFDB Library", {type: "success"}));
+				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", {type: "success"}));
 			}).catch(error => {
-				BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				BdApi.UI.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
 			});
 		}
 		
@@ -40,7 +40,7 @@ module.exports = (_ => {
 			if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, {pluginQueue: []});
 			if (!window.BDFDB_Global.downloadModal) {
 				window.BDFDB_Global.downloadModal = true;
-				BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
+				BdApi.UI.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
 					confirmText: "Download Now",
 					cancelText: "Cancel",
 					onCancel: _ => {delete window.BDFDB_Global.downloadModal;},
@@ -105,10 +105,10 @@ module.exports = (_ => {
 			}
 
 			processUserSettingsAppearance (e) {
-				let [children, index] = BDFDB.ReactUtils.findParent(e.returnvalue, {filter: n => n && n.props && n.props.children == BDFDB.LanguageUtils.LanguageStrings.ACCESSIBILITY_DARK_SIDEBAR});
+				let [children, index] = BDFDB.ReactUtils.findParent(e.returnvalue, {filter: n => n && n.props && n.props.setting == "APPEARANCE_THEME"});
 				if (index == -1) return;
 				let slider;
-				children.splice(index, 0, [
+				children[index].props.children.push([
 					BDFDB.ReactUtils.createElement("div", {
 						className: BDFDB.disCNS._timedlightdarkmodetimersettings + BDFDB.disCN.margintop20,
 						children: [
@@ -127,7 +127,7 @@ module.exports = (_ => {
 									if (slider) BDFDB.DOMUtils.toggleClass(slider, BDFDB.disCN.sliderdisabled, !value);
 								}
 							}),
-							BDFDB.ReactUtils.elementToReact(BDFDB.DOMUtils.create(`<div class="${BDFDB.disCNS.slider + BDFDB.disCN.margintop20}${!this.settings.general.running ? (" " + BDFDB.disCN.sliderdisabled): ""}"><div class="${BDFDB.disCN.slidertrack}">${[["0%", "00:00"], ["12.5%", "03:00"], ["25%", "06:00"], ["37.5%", "09:00"], ["50%", "12:00"], ["62.5%", "15:00"], ["75%", "18:00"], ["87.5%", "21:00"], ["100%", "24:00"]].map(n => `<div class="${BDFDB.disCNS.slidermark + BDFDB.disCN.slidermarkabove}" style="left:${n[0]};"><div class="${BDFDB.disCN.slidermarkvalue}">${n[1]}</div><div class="${BDFDB.disCN.slidermarkdash}"></div></div>`).join("")}</div><div class="${BDFDB.disCN.sliderbar}"><div class="${BDFDB.disCN.sliderbarfill}"></div></div><div class="${BDFDB.disCN.slidertrack}"><div class="${BDFDB.disCNS.slidergrabber + BDFDB.disCN._timedlightdarkmodetimergrabber}" timer="timer1" style="left: ${this.settings.values.timer1}%;"></div><div class="${BDFDB.disCNS.slidergrabber + BDFDB.disCN._timedlightdarkmodetimergrabber}" timer="timer2" style="left: ${this.settings.values.timer2}%;"></div><div class="${BDFDB.disCNS.slidergrabber + BDFDB.disCN._timedlightdarkmodedategrabber}" timer="current" style="left: ${this.getPercent(new Date())}%; cursor: help !important; height: 12px; margin-top: -7px;"></div></div></div>`), node => {
+							BDFDB.ReactUtils.elementToReact(BDFDB.DOMUtils.create(`<div class="${BDFDB.disCNS.slider + BDFDB.disCNS.sliderhasmarks + BDFDB.disCN.margintop20}${!this.settings.general.running ? (" " + BDFDB.disCN.sliderdisabled): ""}"><div class="${BDFDB.disCN.slidertrack}">${[["0%", "00:00"], ["12.5%", "03:00"], ["25%", "06:00"], ["37.5%", "09:00"], ["50%", "12:00"], ["62.5%", "15:00"], ["75%", "18:00"], ["87.5%", "21:00"], ["100%", "24:00"]].map(n => `<div class="${BDFDB.disCNS.slidermark + BDFDB.disCN.slidermarkabove}" style="left:${n[0]};"><div class="${BDFDB.disCN.slidermarkvalue}">${n[1]}</div><div class="${BDFDB.disCN.slidermarkdash}"></div></div>`).join("")}</div><div class="${BDFDB.disCN.sliderbar}"><div class="${BDFDB.disCN.sliderbarfill}"></div></div><div class="${BDFDB.disCN.slidertrack}"><div class="${BDFDB.disCNS.slidergrabber + BDFDB.disCN._timedlightdarkmodetimergrabber}" timer="timer1" style="left: ${this.settings.values.timer1}%;"></div><div class="${BDFDB.disCNS.slidergrabber + BDFDB.disCN._timedlightdarkmodetimergrabber}" timer="timer2" style="left: ${this.settings.values.timer2}%;"></div><div class="${BDFDB.disCNS.slidergrabber + BDFDB.disCN._timedlightdarkmodedategrabber}" timer="current" style="left: ${this.getPercent(new Date())}%; cursor: help !important; transform: scaleY(50%);"></div></div></div>`), node => {
 								if (!Node.prototype.isPrototypeOf(node)) return;
 								slider = node;
 								this.updateSlider(slider);

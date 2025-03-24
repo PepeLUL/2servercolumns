@@ -2,7 +2,7 @@
  * @name CustomStatusPresets
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.2.5
+ * @version 1.2.9
  * @description Allows you to save Custom Statuses as Quick Select and select them by right-clicking the Status Bubble
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -30,9 +30,9 @@ module.exports = (_ => {
 				else return r.text();
 			}).then(b => {
 				if (!b) throw new Error();
-				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.showToast("Finished downloading BDFDB Library", {type: "success"}));
+				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", {type: "success"}));
 			}).catch(error => {
-				BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				BdApi.UI.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
 			});
 		}
 		
@@ -40,7 +40,7 @@ module.exports = (_ => {
 			if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, {pluginQueue: []});
 			if (!window.BDFDB_Global.downloadModal) {
 				window.BDFDB_Global.downloadModal = true;
-				BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
+				BdApi.UI.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
 					confirmText: "Download Now",
 					cancelText: "Cancel",
 					onCancel: _ => {delete window.BDFDB_Global.downloadModal;},
@@ -213,8 +213,8 @@ module.exports = (_ => {
 								}),
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Select, {
 									className: BDFDB.disCN.flexchild,
-									value: presets[id].clearAfter,
-									options: Object.entries(ClearAfterValues).map(entry => ({value: entry[0], label: !entry[1] || entry[1] == ClearAfterValues.DONT_CLEAR ? BDFDB.LanguageUtils.LanguageStrings.DISPLAY_OPTION_NEVER : entry[1] == ClearAfterValues.TODAY ? BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_TODAY : BDFDB.LanguageUtils.LanguageStringsFormat("CUSTOM_STATUS_HOURS", entry[1]/3600000)})),
+									value: ClearAfterValues[presets[id].clearAfter] || presets[id].clearAfter,
+									options: Object.entries(ClearAfterValues).map(entry => ({value: entry[1], label: !entry[1] || entry[1] == ClearAfterValues.DONT_CLEAR ? BDFDB.LanguageUtils.LanguageStrings.DISPLAY_OPTION_NEVER : entry[1] == ClearAfterValues.TODAY ? BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_TODAY : BDFDB.LanguageUtils.LanguageStringsFormat("CUSTOM_STATUS_HOURS", entry[1]/3600000)})),
 									onChange: value => {
 										presets[id].clearAfter = value;
 										BDFDB.DataUtils.save(presets, _this, "presets");
@@ -247,8 +247,12 @@ module.exports = (_ => {
 				_this = this;
 				
 				this.modulePatches = {
+					before: [
+						"ModalRoot"
+					],
 					after: [
 						"CustomStatusModal",
+						"CustomStatusModalWithPreview",
 						"UserPopoutStatusBubble",
 						"UserPopoutStatusBubbleEmpty"
 					]
@@ -335,7 +339,7 @@ module.exports = (_ => {
 			
 			processUserPopoutStatusBubble (e) {
 				let container = BDFDB.ReactUtils.findChild(e.returnvalue, {props: [["className", BDFDB.disCN.userpopoutstatusbubbleeditable]]});
-				this.processUserPopoutStatusBubbleEmpty(Object.assign({}, e, {returnvalue: container}));
+				if (container) this.processUserPopoutStatusBubbleEmpty(Object.assign({}, e, {returnvalue: container}));
 			}
 			
 			processUserPopoutStatusBubbleEmpty (e) {
@@ -351,6 +355,7 @@ module.exports = (_ => {
 								disabled: true
 							}) : Object.keys(BDFDB.ObjectUtils.sort(enabledPresets, "pos")).map(id => {
 							let imageUrl = presets[id].emojiInfo && (presets[id].emojiInfo.id ? BDFDB.LibraryModules.IconUtils.getEmojiURL(presets[id].emojiInfo) : BDFDB.LibraryModules.EmojiStateUtils.getURL(presets[id].emojiInfo.name));
+							let clearAfter = ClearAfterValues[presets[id].clearAfter] || presets[id].clearAfter;
 							return BDFDB.ContextMenuUtils.createItem(BDFDB.LibraryComponents.MenuItems.MenuItem, {
 								id: BDFDB.ContextMenuUtils.createItemId(this.name, "custom-status-preset", id),
 								label: BDFDB.ReactUtils.createElement("div", {
@@ -394,11 +399,11 @@ module.exports = (_ => {
 										})
 									]
 								}),
-								hint: !presets[id].clearAfter || presets[id].clearAfter == ClearAfterValues.DONT_CLEAR ? BDFDB.LanguageUtils.LanguageStrings.DISPLAY_OPTION_NEVER : presets[id].clearAfter == ClearAfterValues.TODAY ? BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_TODAY : BDFDB.LanguageUtils.LanguageStringsFormat("CUSTOM_STATUS_HOURS", presets[id].clearAfter/3600000),
+								hint: !clearAfter || clearAfter == ClearAfterValues.DONT_CLEAR ? BDFDB.LanguageUtils.LanguageStrings.DISPLAY_OPTION_NEVER : clearAfter == ClearAfterValues.TODAY ? BDFDB.LanguageUtils.LanguageStrings.CUSTOM_STATUS_TODAY : BDFDB.LanguageUtils.LanguageStringsFormat("CUSTOM_STATUS_HOURS", clearAfter/3600000),
 								action: _ => {
 									if (!presets[id]) return;
-									let expiresAt = presets[id].clearAfter && presets[id].clearAfter != ClearAfterValues.DONT_CLEAR ? presets[id].clearAfter : null;
-									if (presets[id].clearAfter === ClearAfterValues.TODAY) {
+									let expiresAt = clearAfter && clearAfter != ClearAfterValues.DONT_CLEAR ? clearAfter : null;
+									if (clearAfter === ClearAfterValues.TODAY) {
 										let date = new Date;
 										expiresAt = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime() - date.getTime();
 									}
@@ -416,14 +421,46 @@ module.exports = (_ => {
 				}, "", this);
 			}
 			
+			processModalRoot (e) {
+				if (!BDFDB.ReactUtils.findChild(e.instance, {props: [["className", BDFDB.disCN.customstatusmodalprofilepreview]]})) return;
+				e.instance.props.size = BDFDB.LibraryComponents.ModalComponents.ModalSize.MEDIUM;
+			}
+			
+			processCustomStatusModalWithPreview (e) {
+				let footer = BDFDB.ReactUtils.findChild(e.returnvalue, {name: "ModalFooter"});
+				if (!footer) return;
+				footer.props.children.props.children.splice(1, 0, BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Button, {
+					color: BDFDB.disCN.modalcancelbutton,
+					look: BDFDB.LibraryComponents.Button.Looks.LINK,
+					style: {marginLeft: "auto"},
+					onClick: event => {
+						BDFDB.PatchUtils.patch(this, BDFDB.LibraryModules.CustomStatusStore, "update", {instead: e2 => {
+							let id = BDFDB.NumberUtils.generateId(Object.keys(presets));
+							presets[id] = {
+								pos: Object.keys(presets).length,
+								clearAfter: e2.methodArguments[2],
+								emojiInfo: e2.methodArguments[1],
+								status: e2.methodArguments[3],
+								text: e2.methodArguments[0]
+							};
+							BDFDB.DataUtils.save(presets, this, "presets");
+							if (!event.shiftKey) e.instance.props.onClose();
+							else id = BDFDB.NumberUtils.generateId(Object.keys(presets));
+						}}, {once: true});
+						footer.props.children.props.children[2].props.onClick();
+					},
+					children: this.labels.modal_savepreset
+				}));
+			}
+			
 			processCustomStatusModal (e) {
 				let footer = BDFDB.ReactUtils.findChild(e.returnvalue, {name: "ModalFooter"});
 				if (!footer) return;
-				let id = BDFDB.NumberUtils.generateId(Object.keys(presets));
 				footer.props.children.splice(1, 0, BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Button, {
 					color: BDFDB.disCN.modalcancelbutton,
 					look: BDFDB.LibraryComponents.Button.Looks.LINK,
 					onClick: event => {
+						let id = BDFDB.NumberUtils.generateId(Object.keys(presets));
 						presets[id] = Object.assign({pos: Object.keys(presets).length}, BDFDB.ObjectUtils.extract(e.instance.state, "clearAfter", "emojiInfo", "status", "text"));
 						BDFDB.DataUtils.save(presets, this, "presets");
 						if (!event.shiftKey) e.instance.props.onClose();

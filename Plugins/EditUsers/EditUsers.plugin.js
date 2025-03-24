@@ -2,7 +2,7 @@
  * @name EditUsers
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 4.9.5
+ * @version 5.0.1
  * @description Allows you to locally edit Users
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -30,9 +30,9 @@ module.exports = (_ => {
 				else return r.text();
 			}).then(b => {
 				if (!b) throw new Error();
-				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.showToast("Finished downloading BDFDB Library", {type: "success"}));
+				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", {type: "success"}));
 			}).catch(error => {
-				BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				BdApi.UI.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
 			});
 		}
 		
@@ -40,7 +40,7 @@ module.exports = (_ => {
 			if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, {pluginQueue: []});
 			if (!window.BDFDB_Global.downloadModal) {
 				window.BDFDB_Global.downloadModal = true;
-				BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
+				BdApi.UI.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
 					confirmText: "Download Now",
 					cancelText: "Cancel",
 					onCancel: _ => {delete window.BDFDB_Global.downloadModal;},
@@ -87,6 +87,7 @@ module.exports = (_ => {
 						friendList:			{value: true, 		description: "Friend List"},
 						inviteList:			{value: true, 		description: "Invite List"},
 						activity:			{value: true, 		description: "Activity Page"},
+						userPanel:			{value: true, 		description: "User DM Panel"},
 						userPopout:			{value: true, 		description: "User Popouts"},
 						userProfile:			{value: true, 		description: "User Profile Modal"},
 						autocompletes:			{value: true, 		description: "Autocomplete Menu"},
@@ -127,6 +128,7 @@ module.exports = (_ => {
 						"UserHeaderUsername",
 						"UserInfo",
 						"UserPanelHeader",
+						"UserPopoutHeader",
 						"UserProfileHeader",
 						"UserSummaryItem",
 						"VoiceUser"
@@ -176,6 +178,9 @@ module.exports = (_ => {
 					}
 					${BDFDB.dotCNS.voicename + BDFDB.dotCN.bottag} {
 						display: inline-flex;
+					}
+					${BDFDB.dotCNS.bottag + BDFDB.dotCN.emojiold} + span {
+						margin-left: 2px;
 					}
 					${BDFDB.dotCNS.peoplesuser + BDFDB.dotCN.peoplesdiscriminator} {
 						display: none;
@@ -314,6 +319,11 @@ module.exports = (_ => {
 				BDFDB.PatchUtils.patch(this, BDFDB.LibraryStores.PresenceStore, "findActivity", {after: e => {
 					let data = changedUsers[e.methodArguments[0]];
 					if (data && (data.removeStatus || data.status || data.statusEmoji) && (e.returnValue && e.returnValue.type === BDFDB.DiscordConstants.ActivityTypes.CUSTOM_STATUS || !e.returnValue && e.methodArguments[1] && e.methodArguments[1].toString().indexOf("type===") > -1 && e.methodArguments[1].toString().indexOf("CUSTOM_STATUS") > -1)) return this.createCustomStatus(changedUsers[e.methodArguments[0]]);
+				}});
+				
+				BDFDB.PatchUtils.patch(this, BDFDB.LibraryModules.CustomStatusUtils, "get", {after: e => {
+					let data = changedUsers[e.methodArguments[0]];
+					if (data && (data.removeStatus || data.status || data.statusEmoji) && (e.returnValue && e.returnValue.type === BDFDB.DiscordConstants.ActivityTypes.CUSTOM_STATUS || !e.returnValue)) return this.createCustomStatus(changedUsers[e.methodArguments[0]]);
 				}});
 				
 				this.forceUpdateAll();
@@ -562,21 +572,13 @@ module.exports = (_ => {
 				}
 			}
 			
-			processUserHeaderAvatar (e) {
-				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id]) return;
-				if (this.settings.places.userPopout) e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
-				if (e.instance.props.displayProfile) {
-					if (changedUsers[e.instance.props.user.id].removeBanner) e.instance.props.displayProfile.banner = null;
-					else if (changedUsers[e.instance.props.user.id].banner) {
-						e.instance.props.displayProfile = BDFDB.ObjectUtils.copy(e.instance.props.displayProfile);
-						e.instance.props.displayProfile.banner = changedUsers[e.instance.props.user.id].banner;
-						e.instance.props.displayProfile.premiumType = 2;
-					}
-				}
+			processUserPanelHeader (e) {
+				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id] || !this.settings.places.userPanel) return;
+				e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
 			}
 			
-			processUserPanelHeader (e) {
-				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id] || !this.settings.places.userProfile) return;
+			processUserPopoutHeader (e) {
+				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id] || !this.settings.places.userPopout) return;
 				e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
 			}
 			
@@ -585,16 +587,29 @@ module.exports = (_ => {
 				e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
 			}
 			
-			processUserHeaderUsername (e) {
-				if (!e.instance.props.user || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.BITE_SIZE && !this.settings.places.userPopout || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.FULL_SIZE && !this.settings.places.userProfile) return;
+			processUserHeaderAvatar (e) {
+				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id] || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.PANEL && !this.settings.places.userPanel || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.BITE_SIZE && !this.settings.places.userPopout || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.FULL_SIZE && !this.settings.places.userProfile) return;
 				let data = changedUsers[e.instance.props.user.id];
-				if (!data) return;
+				e.instance.props.user = this.getUserData(e.instance.props.user.id, true, true);
+				if (e.instance.props.displayProfile) {
+					if (data.removeBanner) e.instance.props.displayProfile.banner = null;
+					else if (data.banner) {
+						e.instance.props.displayProfile = BDFDB.ObjectUtils.copy(e.instance.props.displayProfile);
+						e.instance.props.displayProfile.banner = data.banner;
+						e.instance.props.displayProfile.premiumType = 2;
+					}
+				}
+			}
+			
+			processUserHeaderUsername (e) {
+				if (!e.instance.props.user || !changedUsers[e.instance.props.user.id] || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.PANEL && !this.settings.places.userPanel || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.BITE_SIZE && !this.settings.places.userPopout || e.instance.props.profileType == BDFDB.DiscordConstants.ProfileTypes.FULL_SIZE && !this.settings.places.userProfile) return;
+				let data = changedUsers[e.instance.props.user.id];
 				if (!e.returnvalue) {
 					let nickname = this.getUserNick(e.instance.props.user.id, e.instance.props.nickname || e.instance.props.user.globalName);
 					e.instance.props.nickname = nickname ? nickname : null;
 				}
 				else {
-					if (data.color1 || data.tag) {
+					if (data.color1 || data.tag || data.tagEmoji) {
 						let [children, index] = BDFDB.ReactUtils.findParent(e.returnvalue, {props: [["className", BDFDB.disCN.userheadernickname]]});
 						if (index > -1) {
 							this.changeUserColor(children[index], e.instance.props.user.id);
@@ -971,7 +986,7 @@ module.exports = (_ => {
 			}
 			
 			processFocusRingScope (e) {
-				if (this.settings.places.mentions && e.returnvalue.props.className.indexOf(BDFDB.disCN.mention) > -1 && e.instance.props["edited-mention-color"]) {
+				if (this.settings.places.mentions && e.returnvalue.props.className && e.returnvalue.props.className.indexOf(BDFDB.disCN.mention) > -1 && e.instance.props["edited-mention-color"]) {
 					e.returnvalue.props.style = Object.assign({}, e.returnvalue.props.style, {"--edited-mention-color": e.instance.props["edited-mention-color"]});
 				}
 			}
@@ -1018,9 +1033,13 @@ module.exports = (_ => {
 			}
 			
 			processNameContainer (e) {
-				if (!this.settings.places.memberList || !e.instance.props.user || !this.shouldChangeInChat(e.instance.props.channel.id)) return;
-				this.changeUserColor(e.instance.props.name, e.instance.props.user.id, {e: e, guildId: e.instance.props.channel.guild_id});
-				this.injectBadge(BDFDB.ObjectUtils.get(e.instance, "props.decorators.props.children"), e.instance.props.user.id, BDFDB.LibraryStores.SelectedGuildStore.getGuildId(), 2, {
+				let channelId = BDFDB.LibraryStores.SelectedChannelStore.getChannelId();
+				if (!this.settings.places.memberList || !this.shouldChangeInChat(channelId)) return;
+				let userId = BDFDB.ReactUtils.findValue(e.instance.props.name, "userId");
+				if (!userId) return;
+				let guildId = BDFDB.LibraryStores.SelectedGuildStore.getGuildId();
+				this.changeUserColor(e.instance.props.name, userId, {e: e, guildId: guildId});
+				this.injectBadge(BDFDB.ObjectUtils.get(e.instance, "props.decorators.props.children"), userId, guildId, 2, {
 					tagClass: BDFDB.disCN.bottagmember
 				});
 			}
@@ -1082,6 +1101,7 @@ module.exports = (_ => {
 				if (!e.returnvalue) {
 					let data = changedUsers[e.instance.props.user.id];
 					if (data.removeStatus || data.status || data.statusEmoji) {
+						if (e.instance.props.status == "offline") e.instance.props.status = "offline_with_status";
 						e.instance.props.activities = [].concat(e.instance.props.activities).filter(n => n.type != BDFDB.DiscordConstants.ActivityTypes.CUSTOM_STATUS);
 						let activity = this.createCustomStatus(changedUsers[e.instance.props.user.id]);
 						if (activity) e.instance.props.activities.unshift(activity);
@@ -1323,7 +1343,7 @@ module.exports = (_ => {
 			injectBadge (children, userId, guildId, insertIndex, config = {}) {
 				if (!BDFDB.ArrayUtils.is(children) || !userId) return;
 				let data = changedUsers[userId];
-				if (data && data.tag) {
+				if (data && (data.tag || data.tagEmoji)) {
 					let memberColor = data.ignoreTagColor && (BDFDB.LibraryStores.GuildMemberStore.getMember(guildId, userId) || {}).colorString;
 					let fontColor = !config.inverted ? data.color4 : (memberColor || data.color3);
 					let backgroundColor = !config.inverted ? (memberColor || data.color3) : data.color4;
@@ -1336,10 +1356,16 @@ module.exports = (_ => {
 							background: BDFDB.ObjectUtils.is(backgroundColor) ? BDFDB.ColorUtils.createGradient(backgroundColor) : BDFDB.ColorUtils.convert(backgroundColor, "RGBA"),
 							color: fontGradient ? BDFDB.ColorUtils.convert(fontColor[0], "RGBA") : BDFDB.ColorUtils.convert(fontColor, "RGBA")
 						},
-						tag: fontGradient ? BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextGradientElement, {
-							gradient: BDFDB.ColorUtils.createGradient(fontColor),
-							children: data.tag
-						}) : data.tag
+						tag: [
+							data.tagEmoji && BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Emoji, {
+								emojiId: data.tagEmoji.id,
+								emojiName: data.tagEmoji.name
+							}),
+							data.tag && (fontGradient ? BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextGradientElement, {
+								gradient: BDFDB.ColorUtils.createGradient(fontColor),
+								children: data.tag
+							}) : BDFDB.ReactUtils.createElement("span", {children: data.tag}))
+						]
 					}));
 				}
 			}
@@ -1361,7 +1387,7 @@ module.exports = (_ => {
 				let member = BDFDB.LibraryStores.GuildMemberStore.getMember(BDFDB.LibraryStores.SelectedGuildStore.getGuildId(), user.id) || {};
 				let activity = BDFDB.LibraryStores.PresenceStore.getApplicationActivity(user.id);
 				
-				let avatarInput, bannerInput, statusEmojiInput, statusInput, colorPicker3, colorPicker4, colorPicker5, colorPicker6, colorPicker7;
+				let avatarInput, bannerInput, statusEmojiInput, statusInput, tagEmojiInput, tagInput, colorPicker3, colorPicker4, colorPicker5, colorPicker6, colorPicker7;
 				
 				BDFDB.ModalUtils.open(this, {
 					size: "LARGE",
@@ -1581,9 +1607,46 @@ module.exports = (_ => {
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {
 									title: this.labels.modal_usertag,
 									className: BDFDB.disCN.marginbottom20,
-									children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
-										value: data.tag,
-										onChange: value => newData.tag = value
+									children: BDFDB.ReactUtils.createElement("div", {
+										className: BDFDB.disCN.emojiinputcontainer,
+										children: [
+											BDFDB.ReactUtils.createElement("div", {
+												className: BDFDB.disCN.emojiinputbuttoncontainer,
+												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.EmojiPickerButton, {
+													position: BDFDB.LibraryComponents.PopoutContainer.Positions.BOTTOM,
+													emoji: data.tagEmoji,
+													allowManagedEmojis: true,
+													allowManagedEmojisUsage: true,
+													ref: instance => {if (instance) tagEmojiInput = instance;},
+													onSelect: value => newData.tagEmoji = value
+												})
+											}),
+											BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.TextInput, {
+												inputClassName: BDFDB.disCN.emojiinput,
+												maxLength: 100000000000000000000,
+												value: data.tag,
+												placeholder: activity && activity.type == BDFDB.DiscordConstants.ActivityTypes.CUSTOM_STATUS && activity.state || "",
+												disabled: data.removeStatus,
+												ref: instance => {if (instance) tagInput = instance;},
+												onChange: value => newData.tag = value
+											}),
+											BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.Button, {
+												size: BDFDB.LibraryComponents.Button.Sizes.NONE,
+												look: BDFDB.LibraryComponents.Button.Looks.BLANK,
+												className: BDFDB.disCN.emojiinputclearbutton,
+												children: BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.SvgIcon, {
+													className: BDFDB.disCN.emojiinputclearicon,
+													name: BDFDB.LibraryComponents.SvgIcon.Names.CLOSE_CIRCLE
+												}),
+												onClick: _ => {
+													newData.tag = "";
+													newData.tagEmoji = null;
+													tagInput.props.value = "";
+													delete tagEmojiInput.props.emoji;
+													BDFDB.ReactUtils.forceUpdate(tagInput, tagEmojiInput);
+												}
+											})
+										]
 									})
 								}),
 								BDFDB.ReactUtils.createElement(BDFDB.LibraryComponents.FormItem, {

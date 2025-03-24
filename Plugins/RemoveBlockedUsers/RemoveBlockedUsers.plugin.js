@@ -2,7 +2,7 @@
  * @name RemoveBlockedUsers
  * @author DevilBro
  * @authorId 278543574059057154
- * @version 1.7.0
+ * @version 1.7.3
  * @description Removes blocked Messages/Users
  * @invite Jx3TjNS
  * @donate https://www.paypal.me/MircoWittrien
@@ -13,11 +13,7 @@
  */
 
 module.exports = (_ => {
-	const changeLog = {
-		"added": {
-			"Block Replies": "Added option to completely block messages, that replied to blocked messages"
-		}
-	};
+	const changeLog = {};
 
 	return !window.BDFDB_Global || (!window.BDFDB_Global.loaded && !window.BDFDB_Global.started) ? class {
 		constructor (meta) {for (let key in meta) this[key] = meta[key];}
@@ -32,9 +28,9 @@ module.exports = (_ => {
 				else return r.text();
 			}).then(b => {
 				if (!b) throw new Error();
-				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.showToast("Finished downloading BDFDB Library", {type: "success"}));
+				else return require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", {type: "success"}));
 			}).catch(error => {
-				BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				BdApi.UI.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
 			});
 		}
 		
@@ -42,7 +38,7 @@ module.exports = (_ => {
 			if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, {pluginQueue: []});
 			if (!window.BDFDB_Global.downloadModal) {
 				window.BDFDB_Global.downloadModal = true;
-				BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
+				BdApi.UI.showConfirmationModal("Library Missing", `The Library Plugin needed for ${this.name} is missing. Please click "Download Now" to install it.`, {
 					confirmText: "Download Now",
 					cancelText: "Cancel",
 					onCancel: _ => {delete window.BDFDB_Global.downloadModal;},
@@ -302,7 +298,7 @@ module.exports = (_ => {
 			processMessage (e) {
 				if (!this.settings.places.replies) return;
 				let repliedMessage = e.instance.props.childrenRepliedMessage;
-				if (repliedMessage && repliedMessage.props && repliedMessage.props.children && repliedMessage.props.children.props && repliedMessage.props.children.props.referencedMessage && repliedMessage.props.children.props.referencedMessage.message && repliedMessage.props.children.props.referencedMessage.message.author && BDFDB.LibraryStores.RelationshipStore.isBlocked(repliedMessage.props.children.props.referencedMessage.message.author.id)) {
+				if (repliedMessage && repliedMessage.props && repliedMessage.props.referencedMessage && repliedMessage.props.referencedMessage.message && repliedMessage.props.referencedMessage.message.author && BDFDB.LibraryStores.RelationshipStore.isBlocked(repliedMessage.props.referencedMessage.message.author.id)) {
 					delete e.instance.props.childrenRepliedMessage;
 					let header = e.instance.props.childrenHeader;
 					if (header && header.props) {
@@ -409,7 +405,7 @@ module.exports = (_ => {
 				}
 				if (hiddenRows) {
 					let indexSum = 0;
-					for (let i in newGroups) {
+					for (let i in newGroups) if (newGroups[i].id != "content-inventory-feed") {
 						newGroups[i].index = indexSum;
 						if (newGroups[i].count > 0) indexSum += (newGroups[i].count + 1);
 					}
@@ -423,6 +419,7 @@ module.exports = (_ => {
 						return [].concat(array.filter(filter), new Array(suffixLength))
 					};
 					e.instance.props.rows = removeEmptyWithin(newRows, n => n);
+					if (newGroups[0] && newGroups[0].id == "content-inventory-feed") newGroups[0].index = e.instance.props.rows.length - (newGroups[0].count + 1);
 					e.instance.props.groups = removeEmptyWithin(newGroups, g => g && g.count > 0);
 				}
 			}
